@@ -1,0 +1,23 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { api, fresh, formWith } from './helpers';
+const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jL1sAAAAASUVORK5CYII=', 'base64');
+const photo = (name, bytes, mime) => { const form = new FormData(); form.append('photo', new File([bytes], name, { type: mime })); return form; };
+test('profile photos upload, replace, persist, remain private, validate and remove', async () => {
+  fresh();
+  assert.equal((await api(null, 'POST', '/profile/photo', undefined, photo('photo.png', png, 'image/png'))).status, 401);
+  assert.equal((await api('emp', 'POST', '/profile/photo', undefined, photo('bad.png', 'not an image', 'image/png'))).status, 400);
+  assert.equal((await api('emp', 'POST', '/profile/photo', undefined, photo('photo.png', Buffer.alloc(2 * 1024 * 1024 + 1), 'image/png'))).status, 400);
+  const first = await api('emp', 'POST', '/profile/photo', undefined, photo('photo.png', png, 'image/png'));
+  assert.equal(first.status, 200); assert.match(first.data.url, /^\/api\/profile\/photo\?v=\d+$/);
+  assert.equal((await api('emp', 'GET', '/profile')).data.user.photo_url, first.data.url);
+  const response = await api('emp', 'GET', '/profile/photo');
+  assert.equal(response.status, 200); assert.equal(response.res.headers.get('content-type'), 'image/png');
+  assert.equal(response.res.headers.get('cache-control'), 'private, no-store');
+  assert.equal((await api('mgr', 'GET', first.data.url.replace('/api', ''))).status, 404);
+  const second = await api('emp', 'POST', '/profile/photo', undefined, photo('replacement.png', png, 'image/png'));
+  assert.notEqual(second.data.url, first.data.url);
+  assert.equal((await api('emp', 'DELETE', '/profile/photo')).status, 200);
+  assert.equal((await api('emp', 'GET', '/profile')).data.user.photo_url, null);
+  assert.equal((await api('emp', 'GET', '/profile/photo')).status, 404);
+});

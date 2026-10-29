@@ -26,10 +26,17 @@ export function listApprovals(db, user, q = {}) {
   const total = db.get(`SELECT COUNT(*) c FROM (${inner})`, ...p).c;
   let rows = db.all(`SELECT * FROM (${inner}) ORDER BY approval_id DESC LIMIT ? OFFSET ?`, ...p, size, offset);
   rows = rows.map((r) => ({ ...r, priority: type === 'trip' ? priorityOf({ emergency: r.emergency, dep_date: r.dep_date, est_budget: r.amount }) : 'Normal', pendingDays: Math.max(0, Math.floor((Date.now() - Date.parse(r.created_at)) / 86400000)) }));
-  const base = db.all(`SELECT a.status, a.created_at FROM approvals a WHERE a.entity_type=? AND ${mine(user)}`, type, user.id, user.role);
-  const kpis = { total: base.length, pending: base.filter((x) => x.status === 'Pending').length, approved: base.filter((x) => x.status === 'Approved').length, rejected: base.filter((x) => x.status === 'Rejected').length,
-    overdue: base.filter((x) => x.status === 'Pending' && Date.now() - Date.parse(x.created_at) > 7 * 86400000).length };
-  const tabs = Object.fromEntries(['trip', 'expense', 'booking'].map((t) => [t, db.get(`SELECT COUNT(*) c FROM approvals a WHERE a.entity_type=? AND a.status='Pending' AND ${mine(user)}`, t, user.id, user.role).c]));
+  // Aggregate the full history in SQLite instead of materializing it in React's
+  // server process. Keep the existing per-user/role predicate and unfiltered KPIs.
+  const kpis = db.get(`SELECT COUNT(*) total,
+    COUNT(CASE WHEN a.status='Pending' THEN 1 END) pending,
+    COUNT(CASE WHEN a.status='Approved' THEN 1 END) approved,
+    COUNT(CASE WHEN a.status='Rejected' THEN 1 END) rejected,
+    COUNT(CASE WHEN a.status='Pending' AND julianday(a.created_at)<julianday(?) THEN 1 END) overdue
+    FROM approvals a WHERE a.entity_type=? AND ${mine(user)}`,
+  new Date(Date.now() - 7 * 86400000).toISOString(), type, user.id, user.role);
+  const tabs = { trip: 0, expense: 0, booking: 0 };
+  for (const row of db.all(`SELECT a.entity_type, COUNT(*) c FROM approvals a WHERE a.status='Pending' AND a.entity_type IN ('trip','expense','booking') AND ${mine(user)} GROUP BY a.entity_type`, user.id, user.role)) tabs[row.entity_type] = row.c;
   return { rows, total, page, size, kpis, tabs, type };
 }
 

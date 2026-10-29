@@ -1,0 +1,202 @@
+ ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of C:\sujit web\xgeniq travel\package-lock.json as the root directory.
+ To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
+ Detected additional lockfiles: 
+   * C:\sujit web\xgeniq travel\geniq-travel\package-lock.json
+
+   ▲ Next.js 15.5.28
+   - Local:        http://localhost:3106
+   - Network:      http://192.168.1.37:3106
+
+ ✓ Starting...
+ ✓ Ready in 2.9s
+ ✓ Compiled /middleware in 667ms (115 modules)
+ ○ Compiling /login ...
+ ✓ Compiled /login in 1227ms (637 modules)
+(node:26260) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ GET /login 200 in 1684ms
+ GET /login 200 in 243ms
+ ○ Compiling /api/[...path] ...
+ ✓ Compiled /api/[...path] in 746ms (664 modules)
+ POST /api/auth/login 200 in 2577ms
+(node:19228) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ POST /api/auth/mfa 200 in 66ms
+ ✓ Compiled /dashboard in 487ms (680 modules)
+ GET /dashboard 200 in 1026ms
+(node:8216) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ✓ Compiled /trips in 482ms (692 modules)
+ GET /trips 200 in 756ms
+ ✓ Compiled /bookings in 444ms (700 modules)
+ GET /bookings 200 in 620ms
+ ○ Compiling /expenses ...
+ ✓ Compiled /expenses in 634ms (708 modules)
+ GET /expenses 200 in 954ms
+ ○ Compiling /approvals ...
+ ✓ Compiled /approvals in 558ms (716 modules)
+ GET /approvals 200 in 1090ms
+ ○ Compiling /notifications ...
+ ✓ Compiled /notifications in 1171ms (724 modules)
+ GET /notifications 200 in 1431ms
+ ✓ Compiled /profile in 415ms (729 modules)
+ GET /profile 200 in 596ms
+ GET /api/auth/me 200 in 82ms
+ GET /api/auth/me 200 in 27ms
+ GET /api/auth/me 200 in 24ms
+ GET /api/auth/me 200 in 25ms
+ GET /api/auth/me 200 in 24ms
+ GET /api/trips 200 in 41ms
+ GET /api/trips 200 in 26ms
+ GET /api/trips 200 in 26ms
+ GET /api/trips 200 in 32ms
+ GET /api/trips 200 in 31ms
+ GET /api/bookings 200 in 38ms
+ GET /api/bookings 200 in 38ms
+ GET /api/bookings 200 in 46ms
+ GET /api/bookings 200 in 49ms
+ GET /api/bookings 200 in 40ms
+ GET /api/expenses 200 in 40ms
+ GET /api/expenses 200 in 55ms
+ GET /api/expenses 200 in 35ms
+ GET /api/expenses 200 in 44ms
+ GET /api/expenses 200 in 34ms
+ GET /api/approvals 200 in 33ms
+ GET /api/approvals 200 in 46ms
+ GET /api/approvals 200 in 55ms
+ GET /api/approvals 200 in 67ms
+ GET /api/approvals 200 in 30ms
+ GET /api/users 403 in 34ms
+ POST /api/auth/logout 200 in 41ms
+ GET /api/auth/me 401 in 29ms
+ GET /login 200 in 371ms
+(node:33576) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ POST /api/auth/login 200 in 75ms
+ POST /api/auth/mfa 200 in 29ms
+ GET /dashboard 200 in 403ms
+ GET /trips 200 in 88ms
+(node:24916) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ GET /bookings 200 in 87ms
+ GET /expenses 200 in 91ms
+ GET /approvals 200 in 61ms
+ GET /notifications 200 in 143ms
+ GET /profile 200 in 45ms
+ GET /api/auth/me 200 in 37ms
+ GET /api/auth/me 200 in 19ms
+ GET /api/auth/me 200 in 26ms
+ GET /api/auth/me 200 in 20ms
+ GET /api/auth/me 200 in 20ms
+ GET /api/trips 200 in 22ms
+ GET /api/trips 200 in 25ms
+ GET /api/trips 200 in 20ms
+ GET /api/trips 200 in 31ms
+ GET /api/trips 200 in 35ms
+ GET /api/bookings 200 in 29ms
+ GET /api/bookings 200 in 28ms
+ GET /api/bookings 200 in 30ms
+ GET /api/bookings 200 in 21ms
+ GET /api/bookings 200 in 20ms
+ GET /api/expenses 200 in 23ms
+ GET /api/expenses 200 in 34ms
+ GET /api/expenses 200 in 19ms
+ GET /api/expenses 200 in 20ms
+ GET /api/expenses 200 in 22ms
+ GET /api/approvals 200 in 23ms
+ GET /api/approvals 200 in 20ms
+ GET /api/approvals 200 in 20ms
+ GET /api/approvals 200 in 20ms
+ GET /api/approvals 200 in 21ms
+ GET /api/users 403 in 26ms
+ POST /api/auth/logout 200 in 21ms
+ GET /api/auth/me 401 in 19ms
+ GET /login 200 in 123ms
+(node:32796) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ POST /api/auth/login 200 in 61ms
+ POST /api/auth/mfa 200 in 46ms
+ GET /dashboard 200 in 234ms
+(node:28392) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ GET /trips 200 in 285ms
+ GET /bookings 200 in 153ms
+ GET /expenses 200 in 42ms
+ GET /approvals 200 in 222ms
+ GET /notifications 200 in 40ms
+ GET /profile 200 in 51ms
+ GET /api/auth/me 200 in 43ms
+ GET /api/auth/me 200 in 31ms
+ GET /api/auth/me 200 in 22ms
+ GET /api/auth/me 200 in 27ms
+ GET /api/auth/me 200 in 26ms
+ GET /api/trips 200 in 28ms
+ GET /api/trips 200 in 25ms
+ GET /api/trips 200 in 21ms
+ GET /api/trips 200 in 24ms
+ GET /api/trips 200 in 22ms
+ GET /api/bookings 200 in 23ms
+ GET /api/bookings 200 in 25ms
+ GET /api/bookings 200 in 23ms
+ GET /api/bookings 200 in 44ms
+ GET /api/bookings 200 in 21ms
+ GET /api/expenses 200 in 20ms
+ GET /api/expenses 200 in 19ms
+ GET /api/expenses 200 in 20ms
+ GET /api/expenses 200 in 19ms
+ GET /api/expenses 200 in 20ms
+ GET /api/approvals 200 in 22ms
+ GET /api/approvals 200 in 21ms
+ GET /api/approvals 200 in 23ms
+ GET /api/approvals 200 in 22ms
+ GET /api/approvals 200 in 20ms
+ GET /api/users 403 in 20ms
+ POST /api/auth/logout 200 in 18ms
+ GET /api/auth/me 401 in 19ms
+ GET /login 200 in 120ms
+(node:30032) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ POST /api/auth/login 200 in 63ms
+ POST /api/auth/mfa 200 in 29ms
+ GET /dashboard 200 in 198ms
+ GET /trips 200 in 58ms
+(node:23008) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ GET /bookings 200 in 277ms
+ GET /expenses 200 in 239ms
+ GET /approvals 200 in 178ms
+ GET /notifications 200 in 46ms
+ GET /profile 200 in 39ms
+ GET /api/auth/me 200 in 47ms
+ GET /api/auth/me 200 in 26ms
+ GET /api/auth/me 200 in 28ms
+ GET /api/auth/me 200 in 23ms
+ GET /api/auth/me 200 in 21ms
+ GET /api/trips 200 in 23ms
+ GET /api/trips 200 in 21ms
+ GET /api/trips 200 in 31ms
+ GET /api/trips 200 in 21ms
+ GET /api/trips 200 in 22ms
+ GET /api/bookings 200 in 35ms
+ GET /api/bookings 200 in 23ms
+ GET /api/bookings 200 in 22ms
+ GET /api/bookings 200 in 52ms
+ GET /api/bookings 200 in 19ms
+ GET /api/expenses 200 in 18ms
+ GET /api/expenses 200 in 19ms
+ GET /api/expenses 200 in 21ms
+ GET /api/expenses 200 in 23ms
+ GET /api/expenses 200 in 23ms
+ GET /api/approvals 200 in 21ms
+ GET /api/approvals 200 in 24ms
+ GET /api/approvals 200 in 42ms
+ GET /api/approvals 200 in 23ms
+ GET /api/approvals 200 in 20ms
+ GET /api/users 200 in 20ms
+ POST /api/auth/logout 200 in 18ms
+ GET /api/auth/me 401 in 17ms
+ GET /login 200 in 124ms
+(node:26636) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

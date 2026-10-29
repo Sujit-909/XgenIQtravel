@@ -102,7 +102,7 @@ export function TripFormView({ user, master, trip, attachments = [], formId }) {
   };
   const creator = `${user.name} (${user.empId})`; const created_for = forWho.traveller ? `${forWho.traveller.name} (${forWho.traveller.emp_id}) — ${forWho.kind}` : `${user.name} (${user.empId}) — Self`;
   return (
-    <div className="main-side" style={{ gridTemplateColumns: 'minmax(0,1fr) 300px' }}>
+    <div className="main-side" style={{ '--side-width': '300px' }}>
       <Card title={formId ? `Edit Business Trip Request ${trip?.trip_no || ''}` : 'Business Trip Request'} icon="file" actions={<Link href="/trips" className="small">Cancel</Link>}>
         {errs.length > 0 && <div className="err mb" role="alert">{errs.map((e) => <div key={e}>• {e}</div>)}</div>}
         <div className="form-grid fg2"><Field label="Created By" required><Input className="ro" value={creator} readOnly /></Field><Field label="Created For" required><Input className="ro" value={created_for} readOnly /></Field></div>
@@ -126,7 +126,7 @@ export function TripFormView({ user, master, trip, attachments = [], formId }) {
         {f.emergency && <Field label="Emergency justification" required><Textarea value={f.emergency_justification} onChange={(e) => set('emergency_justification', e.target.value)} /></Field>}
         <div className="section-bar">2. Travel Preferences</div>
         <div className="form-grid fg3"><Field label="Preferred travel mode" required><Select value={f.travel_mode} onChange={(e) => set('travel_mode', e.target.value)} options={TRAVEL_MODES} /></Field>
-          <div style={{ gridColumn: 'span 2' }}><Field label="Additional booking requirements"><div className="row wrap" style={{ height: 36 }}>{EXTRA.map((x) => <Check key={x} checked={f.extra_reqs.includes(x)} onChange={(e) => set('extra_reqs', e.target.checked ? [...f.extra_reqs, x] : f.extra_reqs.filter((y) => y !== x))}>{x}</Check>)}<Input placeholder="Other requirement" value={f.extra_other || ''} onChange={(e) => set('extra_other', e.target.value)} style={{ maxWidth: 220 }} /></div></Field></div></div>
+          <div style={{ gridColumn: 'span 2' }}><Field label="Additional booking requirements"><div className="row wrap" style={{ minHeight: 36 }}>{EXTRA.map((x) => <Check key={x} checked={f.extra_reqs.includes(x)} onChange={(e) => set('extra_reqs', e.target.checked ? [...f.extra_reqs, x] : f.extra_reqs.filter((y) => y !== x))}>{x}</Check>)}<Input placeholder="Other requirement" value={f.extra_other || ''} onChange={(e) => set('extra_other', e.target.value)} style={{ maxWidth: 220 }} /></div></Field></div></div>
         <div className="section-bar">3. Accounting and Budget Information</div>
         <div className="form-grid fg6">
           <Field label="Company Code" required><Select value={f.company_code} onChange={(e) => set('company_code', e.target.value)} options={['ABC01']} /></Field>

@@ -24,7 +24,7 @@ export function BookingsView({ user, data, detail }) {
     <PageHead title="My Bookings" sub="View and manage all your travel bookings" actions={<Link href="/services/flight" className="btn"><Icon name="plus" size={15} />New Booking</Link>} />
     <div className="row wrap mb">{TABS.map(([key, label]) => <button key={key} className={`pill ${nav.get('type', 'all') === key ? 'on' : ''}`} onClick={() => nav.set({ type: key === 'all' ? '' : key })}>{label} <span className="c">{data.tabs[key] ?? 0}</span></button>)}</div>
     <div className="grid g6 mb"><Stat icon="list" value={k.total} label="Total Bookings" /><Stat icon="checkCircle" tone="green" value={k.confirmed} label="Confirmed" iconColor="#15803d" /><Stat icon="clock" tone="orange" value={k.pending} label="Created / Pending" iconColor="#d97706" /><Stat icon="x" tone="red" value={k.cancelled} label="Cancelled" iconColor="#d11a2a" /><Stat icon="file" tone="purple" value={k.claimed} label="Claimed / Reimbursed" iconColor="#6d3fd1" /><Stat icon="file" tone="gray" value={k.notClaimed} label="Not Claimed" iconColor="#55627f" /></div>
-    <div className="main-side" style={{ gridTemplateColumns: 'minmax(0,1fr) 340px' }}>
+    <div className="main-side" style={{ '--side-width': '340px' }}>
       <Card body={false}>
         <div style={{ padding: '12px 16px 0' }}><Filters2 nav={nav} /></div>
         <DataTable rows={data.rows} onRowClick={(r) => nav.set({ selected: r.id }, true)} rowClass={(r) => (detail?.booking.id === r.id ? 'sel' : '')} empty="No bookings found." columns={[
@@ -93,7 +93,7 @@ export function SearchView({ user, trips, initial }) {
         <Btn busy={busy} icon="search" onClick={run}>Search</Btn></div>
       {err && <div className="err mt" role="alert">{err}</div>}
     </Card>
-    {res?.flights && (<div className="main-side" style={{ gridTemplateColumns: 'minmax(0,1fr) 340px' }}>
+    {res?.flights && (<div className="main-side" style={{ '--side-width': '340px' }}>
       <div className="stack">
         <Card title={`Flight Options (${flights.length})`} icon="plane" actions={<Check checked={onlyCompliant} onChange={(e) => setOC(e.target.checked)}>Show only compliant</Check>} body={false}>
           {flights.map((o) => (

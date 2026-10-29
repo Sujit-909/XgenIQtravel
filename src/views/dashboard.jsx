@@ -20,7 +20,7 @@ function EmployeeDash({ user, data }) {
       <Stat icon="calendar" tone="purple" value={k.expired} label="Expired" more="View Details" iconColor="#6d3fd1" href="/documents" />
       <Stat icon="file" tone="green" value={k.expensesPending} label="Expense Reports" sub="Pending to Submit" more="Raise Expense" iconColor="#15803d" href="/expenses" />
     </div>
-    <div className="main-side mb" style={{ gridTemplateColumns: 'minmax(0,1fr) 380px' }}>
+    <div className="main-side mb" style={{ '--side-width': '380px' }}>
       <Card title="Upcoming Trips" icon="plane" actions={<Link href="/trips">View All Trips →</Link>} body={false}>
         <DataTable rows={data.upcoming} empty="No upcoming trips. Start by creating a trip request." columns={[
           { key: 'trip_no', label: 'Trip ID', render: (t) => <Link href={`/trips/${t.id}`} className="bold">{t.trip_no}</Link> },

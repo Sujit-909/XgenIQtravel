@@ -21,47 +21,51 @@ export function LoginView() {
   const api = useApi(); const router = useRouter(); const toast = useToast();
   const [tab, setTab] = useState('in'); const [busy, setBusy] = useState(false); const [err, setErr] = useState('');
   const [f, setF] = useState({ identifier: '', password: '', remember: true, show: false });
+  const submitting = useRef(false);
   const [r, setR] = useState({ name: '', email: '', phone: '', password: '' });
   const submit = async (e) => {
-    e.preventDefault(); setBusy(true); setErr('');
+    e.preventDefault(); if (submitting.current) return; submitting.current = true; setBusy(true); setErr('');
     const res = await api('POST', '/auth/login', { identifier: f.identifier, password: f.password }, { silent: true, refresh: false });
-    setBusy(false);
+    submitting.current = false; setBusy(false);
     if (!res.ok) return setErr(res.error || 'Unable to sign in');
     sessionStorage.setItem('geniq_mfa', JSON.stringify({ token: res.data.token, remember: f.remember, phone: res.data.phoneHint, email: res.data.emailHint }));
     router.push('/mfa');
   };
   const create = async (e) => {
-    e.preventDefault(); setBusy(true); setErr('');
-    const res = await api('POST', '/auth/register', r, { silent: true, refresh: false }); setBusy(false);
+    e.preventDefault(); if (submitting.current) return; submitting.current = true; setBusy(true); setErr('');
+    const res = await api('POST', '/auth/register', r, { silent: true, refresh: false }); submitting.current = false; setBusy(false);
     if (!res.ok) return setErr(res.error); toast('Account created. Please sign in.'); setTab('in'); setF({ ...f, identifier: r.email });
   };
   const sso = async () => { const res = await api('POST', '/auth/sso', {}, { silent: true, refresh: false }); setErr(res.error || ''); };
   return (
     <div className="login-wrap">
-      <div className="login-hero">
-        <div className="row"><Logo size={30} /><div><div style={{ fontWeight: 800, fontSize: 20 }}>Travel Management</div><div className="small" style={{ opacity: .8 }}>Corporate Travel Platform</div></div></div>
-        <div><h1>Your Business Travel Made Simple</h1><ul style={{ padding: 0, marginTop: 24 }}>{['Plan and request your trips', 'Book flights, hotels and more', 'Manage expenses', 'Stay compliant with policy'].map((t) => <li key={t}><Icon name="checkCircle" size={18} />{t}</li>)}</ul></div>
-        <div className="row small between" style={{ opacity: .85 }}><span>Safe</span><span>Smart</span><span>Compliant</span><span>Anywhere</span></div>
-      </div>
-      <div className="center-page">
-        <div className="login-card card"><div className="card-b" style={{ padding: 26 }}>
-          <div className="tabs" style={{ marginBottom: 18 }}><button className={`tab ${tab === 'in' ? 'on' : ''}`} onClick={() => { setTab('in'); setErr(''); }}>Sign In</button><button className={`tab ${tab === 'up' ? 'on' : ''}`} onClick={() => { setTab('up'); setErr(''); }}>Create Account</button></div>
+      <section className="login-hero" aria-label="XgenIQ Travel Management">
+        <div className="login-brand"><Logo size={36} /><div><strong>Travel Management</strong><span>Corporate Travel Platform</span></div></div>
+        <div className="login-message"><h1>Your Business Travel<br className="login-wide-break" /> Made Simple</h1>
+          <ul className="login-features">{[['plane', 'Plan and request your trips'], ['building', 'Book flights, hotels and more'], ['card', 'Manage expenses'], ['shield', 'Stay compliant with policy']].map(([icon, text]) => <li key={text}><span className="login-feature-icon"><Icon name={icon} size={24} /></span><span>{text}</span></li>)}</ul>
+        </div>
+        <div className="login-airport" aria-hidden="true" />
+        <div className="login-benefits">{[['shield', 'Safe'], ['chart', 'Smart'], ['file', 'Compliant'], ['globe', 'Anywhere']].map(([icon, text]) => <span key={text}><Icon name={icon} size={22} />{text}</span>)}</div>
+      </section>
+      <div className="login-auth-panel">
+        <div className="login-card card"><div className="login-card-body">
+          <div className="tabs login-tabs" role="group" aria-label="Account access"><button className={`tab ${tab === 'in' ? 'on' : ''}`} aria-pressed={tab === 'in'} disabled={busy} onClick={() => { setTab('in'); setErr(''); }}>Sign In</button><button className={`tab ${tab === 'up' ? 'on' : ''}`} aria-pressed={tab === 'up'} disabled={busy} onClick={() => { setTab('up'); setErr(''); }}>Create Account</button></div>
           {err && <div className="err mb" role="alert">{err}</div>}
           {tab === 'in' ? (
-            <form className="stack" onSubmit={submit}>
-              <h3>Sign In to XGENIQ Travel Portal</h3>
-              <Field label="Email ID / Corporate Mobile Number" required><Input autoComplete="username" value={f.identifier} onChange={(e) => setF({ ...f, identifier: e.target.value })} placeholder="employee@abccorp.com / +91 9876543210" required /></Field>
-              <Field label="Password" required><div style={{ position: 'relative' }}><Input autoComplete="current-password" type={f.show ? 'text' : 'password'} value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} required /><button type="button" className="icon-btn" style={{ position: 'absolute', right: 6, top: 4 }} onClick={() => setF({ ...f, show: !f.show })} aria-label={f.show ? 'Hide password' : 'Show password'}><Icon name="eye" size={16} /></button></div></Field>
-              <div className="row between"><label className="chk"><input type="checkbox" checked={f.remember} onChange={(e) => setF({ ...f, remember: e.target.checked })} />Remember me</label><Link href="/forgot-password">Forgot password?</Link></div>
-              <Btn type="submit" busy={busy}>Sign In</Btn>
-              <div className="center muted small">OR</div>
-              <Btn type="button" variant="outline" onClick={sso}><Icon name="building" size={15} />Sign in with SSO (Company Account)</Btn>
+            <form className="stack login-form" onSubmit={submit}>
+              <h2>Sign In to XGENIQ Travel Portal</h2>
+              <Field label="Email ID / Corporate Mobile Number" required><span className="login-input"><Icon name="mail" size={19} /><Input autoComplete="username" value={f.identifier} onChange={(e) => setF({ ...f, identifier: e.target.value })} placeholder="Enter your email or mobile number" required /></span></Field>
+              <Field label="Password" required><div className="login-input login-password"><Icon name="lock" size={19} /><Input autoComplete="current-password" type={f.show ? 'text' : 'password'} value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} required /><button type="button" className="icon-btn"  onClick={() => setF({ ...f, show: !f.show })} aria-label={f.show ? 'Hide password' : 'Show password'}><Icon name="eye" size={16} /></button></div></Field>
+              <div className="row between login-options"><label className="chk"><input type="checkbox" checked={f.remember} onChange={(e) => setF({ ...f, remember: e.target.checked })} />Remember me</label><Link href="/forgot-password">Forgot password?</Link></div>
+              <Btn type="submit" busy={busy}>Sign In<Icon name="chevRight" size={18} /></Btn>
+              <div className="login-divider"><span>OR</span></div>
+              <Btn type="button" variant="outline" disabled={busy} onClick={sso}><Icon name="building" size={15} />Sign in with SSO (Company Account)</Btn>
               <div className="center small">New user? <a href="#" onClick={(e) => { e.preventDefault(); setTab('up'); }}>Create an account</a></div>
-              {DEMO && <div className="note small"><b>Demo accounts</b> (password <code>Sujit@909</code>): sujit@xgeniq.com (Employee), manager@xgeniq.com (Manager), travel@xgeniq.com (Travel Desk), karan.mehta@abccorp.com (Finance), admin@xgeniq.com (Admin).</div>}
+              {DEMO && <div className="note small login-demo"><Icon name="users" size={23} /><div><b>Demo accounts</b> (password <code>Sujit@909</code>): sujit@xgeniq.com (Employee), manager@xgeniq.com (Manager), travel@xgeniq.com (Travel Desk), karan.mehta@abccorp.com (Finance), admin@xgeniq.com (Admin).</div></div>}
             </form>
           ) : (
-            <form className="stack" onSubmit={create}>
-              <h3>Create your account</h3>
+            <form className="stack login-form" onSubmit={create}>
+              <h2>Create your account</h2>
               <Field label="Full name" required><Input value={r.name} onChange={(e) => setR({ ...r, name: e.target.value })} required /></Field>
               <Field label="Corporate email" required><Input type="email" value={r.email} onChange={(e) => setR({ ...r, email: e.target.value })} placeholder="name@abccorp.com" required /></Field>
               <Field label="Mobile number" required><Input value={r.phone} onChange={(e) => setR({ ...r, phone: e.target.value })} placeholder="+91 9876543210" required /></Field>

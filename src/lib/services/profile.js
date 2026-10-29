@@ -1,4 +1,5 @@
 import { json } from '../db';
+import { profilePhotoUrl } from './profile-photo';
 import { bad, conflict, forbidden, notFound, nowIso, today, daysBetween, isDate, audit, notify, insert, validity, getSetting } from '../util';
 import { encrypt, decrypt, maskTail } from '../crypto';
 
@@ -169,10 +170,10 @@ export function saveNotifSettings(db, user, input) {
 export function profileBundle(db, user) {
   const u = db.get('SELECT * FROM users WHERE id=?', user.id);
   const mgr = db.get('SELECT name FROM users WHERE id=?', u.manager_id);
-  const docs = listEntity(db, user, 'documents');
   const data = Object.fromEntries(PROFILE_ENTITIES.map((e) => [e, listEntity(db, user, e)]));
+  const docs = data.documents;
   const { password_hash, ...safe } = u;
-  return { user: safe, manager: mgr?.name || null, data, preferences: getPreferences(db, user.id), notifSettings: getNotifSettings(db, user.id),
+  return { user: { ...safe, photo_url: profilePhotoUrl(db, user) }, manager: mgr?.name || null, data, preferences: getPreferences(db, user.id), notifSettings: getNotifSettings(db, user.id),
     stats: { documents: docs.length, documentsValid: docs.filter((d) => ['Valid', 'Verified'].includes(d.status)).length, payments: data['payment-methods'].length + data['bank-accounts'].length, flyers: data['loyalty-programs'].filter((l) => l.category === 'airline').length, emergency: data['emergency-contacts'].length } };
 }
 

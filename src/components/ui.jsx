@@ -34,17 +34,19 @@ export function Icon({ name, size = 18, className = '', style }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className={className} style={style} aria-hidden="true">{d.split(' M').map((seg, i) => <path key={i} d={i ? `M${seg}` : seg} />)}</svg>;
 }
 export function Logo({ size = 22 }) {
-  const width = size * 4;
-  return <img src="/company-logo.png" alt="XGENIQ" width={width} height={Math.round(width * 2 / 3)} style={{ width, height: 'auto', objectFit: 'contain', borderRadius: 4 }} />;
+  return <span className="brand-wordmark" style={{ fontSize: size, fontWeight: 800, letterSpacing: '-0.04em', lineHeight: 1.2, whiteSpace: 'nowrap' }}>XgenIQ</span>;
 }
 
 export const Badge = ({ children, tone }) => <span className={`badge t-${tone || toneOf(children)}`}>{children}</span>;
-export const Avatar = ({ name = '', size = '', tone = '' }) => <span className={`avatar ${size} ${tone}`}>{String(name).split(/\s+/).filter(Boolean).slice(0, 2).map((s) => s[0]).join('').toUpperCase()}</span>;
+export function Avatar({ name = '', size = '', tone = '', src }) {
+  const [failed, setFailed] = useState(null);
+  return <span className={`avatar ${size} ${tone}`}>{src && failed !== src ? <img src={src} alt={`${name}'s profile photo`} onError={() => setFailed(src)} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit' }} /> : String(name).split(/\s+/).filter(Boolean).slice(0, 2).map((s) => s[0]).join('').toUpperCase()}</span>;
+}
 
 export function Card({ title, icon, actions, children, className = '', body = true, sub }) {
   return (
     <section className={`card ${className}`}>
-      {(title || actions) && <div className="card-h"><h2>{icon && <span className="ico-box soft"><Icon name={icon} size={17} /></span>}<span>{title}{sub && <div className="small muted" style={{ fontWeight: 400 }}>{sub}</div>}</span></h2><div className="row">{actions}</div></div>}
+      {(title || actions) && <div className="card-h"><h2>{icon && <span className="ico-box soft"><Icon name={icon} size={17} /></span>}<span>{title}{sub && <div className="small muted" style={{ fontWeight: 400 }}>{sub}</div>}</span></h2><div className="row wrap">{actions}</div></div>}
       {body ? <div className="card-b">{children}</div> : children}
     </section>
   );
@@ -67,7 +69,13 @@ export const Notice = ({ kind = 'note', children }) => <div className={kind}>{ch
 const ToastCtx = createContext(() => {});
 export function ToastProvider({ children }) {
   const [items, setItems] = useState([]);
-  const push = useCallback((text, kind = 'ok') => { const id = Math.random(); setItems((a) => [...a, { id, text, kind }]); setTimeout(() => setItems((a) => a.filter((x) => x.id !== id)), 4500); }, []);
+  const timers = useRef(new Set());
+  useEffect(() => () => { timers.current.forEach(clearTimeout); timers.current.clear(); }, []);
+  const push = useCallback((text, kind = 'ok') => {
+    const id = Math.random(); setItems((a) => [...a, { id, text, kind }]);
+    const timer = setTimeout(() => { timers.current.delete(timer); setItems((a) => a.filter((x) => x.id !== id)); }, 4500);
+    timers.current.add(timer);
+  }, []);
   return <ToastCtx.Provider value={push}>{children}<div className="toasts" role="status" aria-live="polite">{items.map((t) => <div key={t.id} className={`toast ${t.kind === 'error' ? 'error' : ''}`}>{t.text}</div>)}</div></ToastCtx.Provider>;
 }
 export const useToast = () => useContext(ToastCtx);
@@ -107,14 +115,27 @@ export function useForm(initial) {
   return [v, set, bind, setV];
 }
 export function Field({ label, required, hint, children, className = '' }) { return <label className={`f ${className}`}><span>{label}{required && <span className="req"> *</span>}</span>{children}{hint && <span className="hint">{hint}</span>}</label>; }
-export const Input = (p) => <input className={`in ${p.className || ''}`} {...p} />;
+export const Input = (p) => <input {...p} className={`in ${p.className || ''}`} />;
 export const Select = ({ options = [], placeholder, value, ...rest }) => (
   <select className="in" value={value ?? ''} {...rest}>{placeholder !== undefined && <option value="">{placeholder}</option>}{options.map((o) => { const [v, l] = Array.isArray(o) ? o : [typeof o === 'object' ? o.value : o, typeof o === 'object' ? o.label : o]; return <option key={v} value={v}>{l}</option>; })}</select>
 );
 export const Textarea = (p) => <textarea className="in" {...p} />;
 export const Check = ({ checked, onChange, children, disabled }) => <label className="chk"><input type="checkbox" checked={!!checked} onChange={onChange} disabled={disabled} />{children}</label>;
 export const Switch = ({ on, onChange, label }) => <button type="button" className={`switch ${on ? 'on' : ''}`} onClick={() => onChange(!on)} role="switch" aria-checked={!!on} aria-label={label} />;
-export function Btn({ children, variant = '', icon, busy, ...rest }) { return <button className={`btn ${variant}`} disabled={busy || rest.disabled} {...rest}>{icon && <Icon name={icon} size={15} />}{busy ? 'Please wait…' : children}</button>; }
+export function Btn({ children, variant = '', icon, busy, disabled, onClick, className, ...rest }) {
+  const pending = useRef(false); const mounted = useRef(false); const [working, setWorking] = useState(false);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  const click = (event) => {
+    if (pending.current || busy || disabled) { event.preventDefault(); return; }
+    const result = onClick?.(event);
+    if (result && typeof result.then === 'function') {
+      pending.current = true; setWorking(true);
+      Promise.resolve(result).finally(() => { pending.current = false; if (mounted.current) setWorking(false); }).catch(() => {});
+    }
+  };
+  const loading = busy || working;
+  return <button {...rest} className={className ?? `btn ${variant}`} disabled={loading || disabled} aria-busy={loading || undefined} onClick={click}>{icon && <Icon name={icon} size={15} />}{loading ? 'Please wait…' : children}</button>;
+}
 
 export function Modal({ title, onClose, children, footer, size = '' }) {
   useEffect(() => { const h = (e) => e.key === 'Escape' && onClose?.(); window.addEventListener('keydown', h); return () => window.removeEventListener('keydown', h); }, [onClose]);
@@ -145,7 +166,7 @@ export function Pills({ items, value, onChange }) {
 export function DataTable({ columns, rows, rowKey = 'id', onRowClick, selectable, selected = [], onSelect, empty, rowClass, dense }) {
   const all = rows.length > 0 && rows.every((r) => selected.includes(r[rowKey]));
   return (
-    <div className="tbl-wrap">
+    <div className="tbl-wrap" tabIndex={0} role="region" aria-label="Scrollable table">
       <table className="tbl">
         <thead><tr>{selectable && <th style={{ width: 32 }}><input type="checkbox" checked={all} onChange={(e) => onSelect(e.target.checked ? rows.map((r) => r[rowKey]) : [])} aria-label="Select all" /></th>}{columns.map((c) => <th key={c.key} className={c.align === 'right' ? 'right' : ''} style={c.width ? { width: c.width } : undefined}>{c.label}</th>)}</tr></thead>
         <tbody>
@@ -197,7 +218,7 @@ export function Steps({ steps }) { return <div className="steps">{steps.map((s, 
 export const Kv = ({ rows }) => <dl className="kv">{rows.filter(Boolean).map(([k, v]) => <React.Fragment key={k}><dt>{k}</dt><dd>{v ?? '-'}</dd></React.Fragment>)}</dl>;
 export function Menu({ items, trigger }) {
   const [open, setOpen] = useState(false); const ref = useRef(null);
-  useEffect(() => { const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }; document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h); }, []);
+  useEffect(() => { if (!open) return; const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }; document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h); }, [open]);
   return <span ref={ref} style={{ position: 'relative' }}><button className="icon-btn" onClick={() => setOpen(!open)} aria-label="More actions" aria-haspopup="menu">{trigger || <Icon name="more" />}</button>{open && <div className="menu" role="menu">{items.map((it) => (it.href ? <Link key={it.label} href={it.href} onClick={() => setOpen(false)}>{it.label}</Link> : <button key={it.label} onClick={() => { setOpen(false); it.onClick(); }}>{it.label}</button>))}</div>}</span>;
 }
 export const useMemoArr = useMemo;

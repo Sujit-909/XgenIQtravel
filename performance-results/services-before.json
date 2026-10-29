@@ -1,0 +1,597 @@
+{
+  "conditions": "Seeded isolated in-memory SQLite; 25 warm service-dispatch calls including authorization and JSON serialization; not HTTP latency.",
+  "records": [
+    {
+      "role": "emp",
+      "route": "/dashboard",
+      "median": {
+        "ms": 2.014199999999846,
+        "queries": 22,
+        "sqlMs": 1.0770000000006803,
+        "rows": 20,
+        "status": 200
+      },
+      "p95": {
+        "ms": 6.36180000000013,
+        "queries": 22,
+        "sqlMs": 1.481199999999717,
+        "rows": 20,
+        "status": 200
+      }
+    },
+    {
+      "role": "emp",
+      "route": "/trips",
+      "median": {
+        "ms": 1.8825000000001637,
+        "queries": 9,
+        "sqlMs": 0.9272999999998319,
+        "rows": 32,
+        "status": 200
+      },
+      "p95": {
+        "ms": 2.9617000000000644,
+        "queries": 9,
+        "sqlMs": 1.1238999999998214,
+        "rows": 32,
+        "status": 200
+      }
+    },
+    {
+      "role": "emp",
+      "route": "/bookings",
+      "median": {
+        "ms": 1.7007000000000971,
+        "queries": 5,
+        "sqlMs": 0.6221999999997934,
+        "rows": 34,
+        "status": 200
+      },
+      "p95": {
+        "ms": 3.4516000000000986,
+        "queries": 5,
+        "sqlMs": 0.7228999999999814,
+        "rows": 34,
+        "status": 200
+      }
+    },
+    {
+      "role": "emp",
+      "route": "/expenses",
+      "median": {
+        "ms": 0.5048999999999069,
+        "queries": 6,
+        "sqlMs": 0.20880000000011023,
+        "rows": 12,
+        "status": 200
+      },
+      "p95": {
+        "ms": 1.5,
+        "queries": 6,
+        "sqlMs": 0.5844999999999345,
+        "rows": 12,
+        "status": 200
+      }
+    },
+    {
+      "role": "emp",
+      "route": "/approvals",
+      "median": {
+        "ms": 0.4173000000000684,
+        "queries": 8,
+        "sqlMs": 0.22079999999982647,
+        "rows": 0,
+        "status": 200
+      },
+      "p95": {
+        "ms": 1.7507999999997992,
+        "queries": 8,
+        "sqlMs": 0.7850999999998294,
+        "rows": 0,
+        "status": 200
+      }
+    },
+    {
+      "role": "emp",
+      "route": "/profile",
+      "median": {
+        "ms": 0.6503000000000156,
+        "queries": 15,
+        "sqlMs": 0.24589999999989232,
+        "rows": 33,
+        "status": 200
+      },
+      "p95": {
+        "ms": 1.59900000000016,
+        "queries": 15,
+        "sqlMs": 0.33380000000011023,
+        "rows": 33,
+        "status": 200
+      }
+    },
+    {
+      "role": "emp",
+      "route": "/notifications",
+      "median": {
+        "ms": 0.3555999999998676,
+        "queries": 12,
+        "sqlMs": 0.1594000000000051,
+        "rows": 14,
+        "status": 200
+      },
+      "p95": {
+        "ms": 1.5179000000000542,
+        "queries": 12,
+        "sqlMs": 0.7743999999995594,
+        "rows": 14,
+        "status": 200
+      }
+    },
+    {
+      "role": "emp",
+      "route": "/reports/department_spend",
+      "median": {
+        "ms": 0.0886000000000422,
+        "queries": 2,
+        "sqlMs": 0.0181999999999789,
+        "rows": 0,
+        "status": 403
+      },
+      "p95": {
+        "ms": 0.22550000000001091,
+        "queries": 2,
+        "sqlMs": 0.031400000000076034,
+        "rows": 0,
+        "status": 403
+      }
+    },
+    {
+      "role": "mgr",
+      "route": "/dashboard",
+      "median": {
+        "ms": 2.322200000000066,
+        "queries": 32,
+        "sqlMs": 1.289800000000696,
+        "rows": 111,
+        "status": 200
+      },
+      "p95": {
+        "ms": 6.2642000000000735,
+        "queries": 32,
+        "sqlMs": 4.06650000000036,
+        "rows": 111,
+        "status": 200
+      }
+    },
+    {
+      "role": "mgr",
+      "route": "/trips",
+      "median": {
+        "ms": 1.5389000000000124,
+        "queries": 10,
+        "sqlMs": 1.0419999999999163,
+        "rows": 123,
+        "status": 200
+      },
+      "p95": {
+        "ms": 2.996399999999994,
+        "queries": 10,
+        "sqlMs": 1.9150999999999385,
+        "rows": 123,
+        "status": 200
+      }
+    },
+    {
+      "role": "mgr",
+      "route": "/bookings",
+      "median": {
+        "ms": 0.6002000000000862,
+        "queries": 5,
+        "sqlMs": 0.2699999999999818,
+        "rows": 19,
+        "status": 200
+      },
+      "p95": {
+        "ms": 1.490500000000111,
+        "queries": 5,
+        "sqlMs": 0.6162999999999101,
+        "rows": 19,
+        "status": 200
+      }
+    },
+    {
+      "role": "mgr",
+      "route": "/expenses",
+      "median": {
+        "ms": 0.35590000000001965,
+        "queries": 6,
+        "sqlMs": 0.1760999999996784,
+        "rows": 8,
+        "status": 200
+      },
+      "p95": {
+        "ms": 0.787599999999884,
+        "queries": 6,
+        "sqlMs": 0.3883999999995922,
+        "rows": 8,
+        "status": 200
+      }
+    },
+    {
+      "role": "mgr",
+      "route": "/approvals",
+      "median": {
+        "ms": 0.7210999999999785,
+        "queries": 8,
+        "sqlMs": 0.3862999999996646,
+        "rows": 82,
+        "status": 200
+      },
+      "p95": {
+        "ms": 1.807399999999916,
+        "queries": 8,
+        "sqlMs": 0.9174000000000433,
+        "rows": 82,
+        "status": 200
+      }
+    },
+    {
+      "role": "mgr",
+      "route": "/profile",
+      "median": {
+        "ms": 0.31960000000003674,
+        "queries": 15,
+        "sqlMs": 0.06950000000006185,
+        "rows": 4,
+        "status": 200
+      },
+      "p95": {
+        "ms": 0.7744999999999891,
+        "queries": 15,
+        "sqlMs": 0.4623999999998887,
+        "rows": 4,
+        "status": 200
+      }
+    },
+    {
+      "role": "mgr",
+      "route": "/notifications",
+      "median": {
+        "ms": 0.24579999999991742,
+        "queries": 10,
+        "sqlMs": 0.11910000000011678,
+        "rows": 7,
+        "status": 200
+      },
+      "p95": {
+        "ms": 0.3302000000001044,
+        "queries": 10,
+        "sqlMs": 0.13920000000030086,
+        "rows": 7,
+        "status": 200
+      }
+    },
+    {
+      "role": "mgr",
+      "route": "/reports/department_spend",
+      "median": {
+        "ms": 0.6204999999999927,
+        "queries": 10,
+        "sqlMs": 0.40980000000013206,
+        "rows": 17,
+        "status": 200
+      },
+      "p95": {
+        "ms": 1.28449999999998,
+        "queries": 10,
+        "sqlMs": 0.5554999999997108,
+        "rows": 17,
+        "status": 200
+      }
+    },
+    {
+      "role": "fin",
+      "route": "/dashboard",
+      "median": {
+        "ms": 0.3079000000000178,
+        "queries": 17,
+        "sqlMs": 0.1621999999995296,
+        "rows": 6,
+        "status": 200
+      },
+      "p95": {
+        "ms": 0.8836999999998625,
+        "queries": 17,
+        "sqlMs": 0.2807000000004791,
+        "rows": 6,
+        "status": 200
+      }
+    },
+    {
+      "role": "fin",
+      "route": "/trips",
+      "median": {
+        "ms": 1.2198000000000775,
+        "queries": 9,
+        "sqlMs": 0.7677000000005592,
+        "rows": 112,
+        "status": 200
+      },
+      "p95": {
+        "ms": 1.8894999999999982,
+        "queries": 9,
+        "sqlMs": 1.2731999999996333,
+        "rows": 112,
+        "status": 200
+      }
+    },
+    {
+      "role": "fin",
+      "route": "/bookings",
+      "median": {
+        "ms": 0.23059999999986758,
+        "queries": 5,
+        "sqlMs": 0.13109999999983302,
+        "rows": 0,
+        "status": 200
+      },
+      "p95": {
+        "ms": 0.34389999999984866,
+        "queries": 5,
+        "sqlMs": 0.15939999999977772,
+        "rows": 0,
+        "status": 200
+      }
+    },
+    {
+      "role": "fin",
+      "route": "/expenses",
+      "median": {
+        "ms": 0.531400000000076,
+        "queries": 6,
+        "sqlMs": 0.26769999999987704,
+        "rows": 29,
+        "status": 200
+      },
+      "p95": {
+        "ms": 1.5534000000000106,
+        "queries": 6,
+        "sqlMs": 0.30019999999967695,
+        "rows": 29,
+        "status": 200
+      }
+    },
+    {
+      "role": "fin",
+      "route": "/approvals",
+      "median": {
+        "ms": 0.4979000000000724,
+        "queries": 8,
+        "sqlMs": 0.3154000000004089,
+        "rows": 27,
+        "status": 200
+      },
+      "p95": {
+        "ms": 1.3976999999999862,
+        "queries": 8,
+        "sqlMs": 0.31349999999997635,
+        "rows": 27,
+        "status": 200
+      }
+    },
+    {
+      "role": "fin",
+      "route": "/profile",
+      "median": {
+        "ms": 0.12580000000002656,
+        "queries": 15,
+        "sqlMs": 0.04469999999969332,
+        "rows": 0,
+        "status": 200
+      },
+      "p95": {
+        "ms": 0.3345999999999094,
+        "queries": 15,
+        "sqlMs": 0.05519999999933134,
+        "rows": 0,
+        "status": 200
+      }
+    },
+    {
+      "role": "fin",
+      "route": "/notifications",
+      "median": {
+        "ms": 0.1996999999998934,
+        "queries": 8,
+        "sqlMs": 0.07009999999945649,
+        "rows": 1,
+        "status": 200
+      },
+      "p95": {
+        "ms": 0.44010000000002947,
+        "queries": 8,
+        "sqlMs": 0.15729999999985012,
+        "rows": 1,
+        "status": 200
+      }
+    },
+    {
+      "role": "fin",
+      "route": "/reports/department_spend",
+      "median": {
+        "ms": 0.3104999999998199,
+        "queries": 9,
+        "sqlMs": 0.1926999999996042,
+        "rows": 6,
+        "status": 200
+      },
+      "p95": {
+        "ms": 0.3943000000001575,
+        "queries": 9,
+        "sqlMs": 0.24609999999961474,
+        "rows": 6,
+        "status": 200
+      }
+    },
+    {
+      "role": "admin",
+      "route": "/dashboard",
+      "median": {
+        "ms": 0.20839999999998327,
+        "queries": 17,
+        "sqlMs": 0.10150000000021464,
+        "rows": 4,
+        "status": 200
+      },
+      "p95": {
+        "ms": 0.5586000000000695,
+        "queries": 17,
+        "sqlMs": 0.25319999999987886,
+        "rows": 4,
+        "status": 200
+      }
+    },
+    {
+      "role": "admin",
+      "route": "/trips",
+      "median": {
+        "ms": 1.4536000000000513,
+        "queries": 9,
+        "sqlMs": 1.0420999999998912,
+        "rows": 112,
+        "status": 200
+      },
+      "p95": {
+        "ms": 3.7241999999998825,
+        "queries": 9,
+        "sqlMs": 2.2618000000004486,
+        "rows": 112,
+        "status": 200
+      }
+    },
+    {
+      "role": "admin",
+      "route": "/bookings",
+      "median": {
+        "ms": 0.2215000000001055,
+        "queries": 5,
+        "sqlMs": 0.1287000000002081,
+        "rows": 0,
+        "status": 200
+      },
+      "p95": {
+        "ms": 0.5440000000000964,
+        "queries": 5,
+        "sqlMs": 0.2607999999997901,
+        "rows": 0,
+        "status": 200
+      }
+    },
+    {
+      "role": "admin",
+      "route": "/expenses",
+      "median": {
+        "ms": 0.5259000000000924,
+        "queries": 6,
+        "sqlMs": 0.3063999999999396,
+        "rows": 29,
+        "status": 200
+      },
+      "p95": {
+        "ms": 1.177699999999959,
+        "queries": 6,
+        "sqlMs": 0.5339000000001306,
+        "rows": 29,
+        "status": 200
+      }
+    },
+    {
+      "role": "admin",
+      "route": "/approvals",
+      "median": {
+        "ms": 0.39589999999998327,
+        "queries": 8,
+        "sqlMs": 0.22400000000016007,
+        "rows": 0,
+        "status": 200
+      },
+      "p95": {
+        "ms": 1.0757000000000971,
+        "queries": 8,
+        "sqlMs": 0.7879000000004908,
+        "rows": 0,
+        "status": 200
+      }
+    },
+    {
+      "role": "admin",
+      "route": "/profile",
+      "median": {
+        "ms": 0.11349999999993088,
+        "queries": 15,
+        "sqlMs": 0.04500000000007276,
+        "rows": 0,
+        "status": 200
+      },
+      "p95": {
+        "ms": 0.18580000000019936,
+        "queries": 15,
+        "sqlMs": 0.06690000000003238,
+        "rows": 0,
+        "status": 200
+      }
+    },
+    {
+      "role": "admin",
+      "route": "/notifications",
+      "median": {
+        "ms": 0.09829999999988104,
+        "queries": 8,
+        "sqlMs": 0.03610000000071523,
+        "rows": 1,
+        "status": 200
+      },
+      "p95": {
+        "ms": 0.17219999999997526,
+        "queries": 8,
+        "sqlMs": 0.07600000000002183,
+        "rows": 1,
+        "status": 200
+      }
+    },
+    {
+      "role": "admin",
+      "route": "/reports/department_spend",
+      "median": {
+        "ms": 0.22800000000006548,
+        "queries": 9,
+        "sqlMs": 0.15070000000036998,
+        "rows": 6,
+        "status": 200
+      },
+      "p95": {
+        "ms": 0.7691999999999553,
+        "queries": 9,
+        "sqlMs": 0.3669000000002143,
+        "rows": 6,
+        "status": 200
+      }
+    },
+    {
+      "role": "mgr",
+      "route": "/approvals (20,000 additional rows, isolated scaling fixture)",
+      "median": {
+        "ms": 37.529599999999846,
+        "queries": 6,
+        "sqlMs": 33.07499999999982,
+        "rows": 20041
+      },
+      "p95": {
+        "ms": 58.05690000000004,
+        "queries": 6,
+        "sqlMs": 49.8445999999999,
+        "rows": 20041
+      }
+    }
+  ]
+}

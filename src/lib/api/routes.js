@@ -9,6 +9,7 @@ import { buildReportPdf } from '../services/expense-pdf';
 import * as fin from '../services/finance';
 import * as desk from '../services/desk';
 import * as profile from '../services/profile';
+import { uploadProfilePhoto, getProfilePhoto, removeProfilePhoto } from '../services/profile-photo';
 import * as q from '../services/queries';
 import * as policy from '../services/policy';
 import * as assistant from '../services/assistant';
@@ -133,6 +134,12 @@ route('GET', '/reconciliation/:id', { roles: ['finance', 'admin'] }, ({ db, user
 route('POST', '/reconciliation/:id/action', { roles: ['finance', 'admin'] }, ({ db, user, params, body }) => fin.reconciliationAction(db, user, num(params.id), body));
 
 // ---------- profile ----------
+route('POST', '/profile/photo', async ({ db, user, form }) => uploadProfilePhoto(db, user, form?.get('photo')));
+route('DELETE', '/profile/photo', ({ db, user }) => removeProfilePhoto(db, user));
+route('GET', '/profile/photo', ({ db, user }) => {
+  const { file, data } = getProfilePhoto(db, user);
+  return new Response(data, { headers: { 'content-type': file.mime, 'cache-control': 'private, no-store', 'x-content-type-options': 'nosniff' } });
+});
 route('GET', '/profile', ({ db, user }) => profile.profileBundle(db, user));
 route('PATCH', '/profile/personal', ({ db, user, body }) => { profile.updatePersonal(db, user, body); return profile.profileBundle(db, user).user; });
 route('GET', '/profile/preferences', ({ db, user }) => profile.getPreferences(db, user.id));

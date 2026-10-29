@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Card, PageHead, Stat, Badge, Icon, DataTable, Btn, Modal, Field, Input, Select, Textarea, Check, Switch, useApi, useNav, Tabs, Kv, Pills, Avatar, Empty, Confirm } from '@/components/ui';
 import { fdate, fdt, inr } from '@/lib/format';
@@ -125,10 +125,48 @@ export function NotificationsView({ data, settings, category }) {
 
 // ---------- My Profile ----------
 const PREF = { classes: ['Economy', 'Premium Economy', 'Business'], seats: ['Window', 'Aisle', 'No preference'], meals: ['Vegetarian', 'Non-vegetarian', 'Vegan', 'No preference'], hotel: ['Budget', '3 Star / Business', '4 Star', '5 Star'], rooms: ['Non-smoking room', 'Smoking room', 'No preference'], ground: ['Company Cab', 'Local Taxi', 'Rental Cab', 'Public transport'], airlines: ['IndiGo', 'Air India', 'Vistara', 'SpiceJet', 'Singapore Airlines', 'Emirates'], special: ['Wheelchair assistance', 'Extra baggage allowance', 'Medical assistance', 'Prefer morning flight', 'Connect to Wi-Fi in hotel'] };
+function ProfilePhoto({ user }) {
+  const api = useApi(); const input = useRef(null);
+  const [file, setFile] = useState(null); const [preview, setPreview] = useState(null);
+  const [error, setError] = useState(''); const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    if (!file) { setPreview(null); return; }
+    const url = URL.createObjectURL(file); setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+  const choose = (event) => {
+    const selected = event.target.files?.[0]; event.target.value = '';
+    if (!selected) return;
+    if (!['image/jpeg', 'image/png'].includes(selected.type) || !selected.size || selected.size > 2 * 1024 * 1024) {
+      setError('Choose a JPG or PNG image smaller than 2 MB.'); return;
+    }
+    setError(''); setFile(selected);
+  };
+  const upload = async () => {
+    if (!file || busy) return;
+    setBusy(true); setError(''); const form = new FormData(); form.append('photo', file);
+    const result = await api('POST', '/profile/photo', form, { silent: true, success: 'Profile photo updated' });
+    setBusy(false); if (result.ok) setFile(null); else setError(result.error);
+  };
+  const remove = async () => {
+    setBusy(true); setError('');
+    const result = await api('DELETE', '/profile/photo', undefined, { silent: true, success: 'Profile photo removed' });
+    setBusy(false); if (result.ok) setFile(null); else setError(result.error);
+  };
+  return <div className="center stack" style={{ alignItems: 'center', maxWidth: 220 }}>
+    <Avatar name={user.name} src={preview || user.photo_url} size="lg" />
+    <input ref={input} type="file" accept="image/jpeg,image/png,.jpg,.jpeg,.png" hidden onChange={choose} aria-label="Choose profile photo" />
+    <Btn variant="outline sm" icon="upload" disabled={busy} onClick={() => input.current?.click()}>{user.photo_url ? 'Change photo' : 'Upload photo'}</Btn>
+    <span className="small muted">JPG, PNG (Max 2 MB)</span>
+    {file && <><span className="small" style={{ overflowWrap: 'anywhere' }}>{file.name}</span><div className="row wrap"><Btn busy={busy} onClick={upload}>Save photo</Btn><Btn variant="outline" disabled={busy} onClick={() => { setFile(null); setError(''); }}>Cancel</Btn></div></>}
+    {user.photo_url && !file && <Btn variant="ghost" disabled={busy} onClick={remove}>Remove photo</Btn>}
+    {error && <div className="err small" role="alert">{error}</div>}
+  </div>;
+}
 function PersonalTab({ u, manager }) {
   const [edit, setEdit] = useState(false);
   return (<><Card title="Personal Information" icon="user" sub="View and manage your personal details." actions={<Btn icon="edit" onClick={() => setEdit(true)}>Edit</Btn>}>
-    <div className="row" style={{ alignItems: 'flex-start', gap: 28 }}><div className="center"><Avatar name={u.name} size="lg" /><div className="small muted mt">JPG, PNG (Max 2 MB)</div></div>
+    <div className="row" style={{ alignItems: 'flex-start', gap: 28 }}><ProfilePhoto user={u} />
       <div className="grow grid g2">{[['Full Name', u.name], ['Blood Group', u.blood_group], ['Employee ID', u.emp_id], ['Department', u.department], ['Date of Birth', u.dob ? `${fdate(u.dob)} (${Math.floor((Date.now() - Date.parse(u.dob)) / 31557600000)} years)` : '-'], ['Designation', u.designation], ['Gender', u.gender], ['Work Email', u.email], ['Nationality', u.nationality], ['Work Phone', u.phone], ['Reporting Manager', manager || '-'], ['Grade', u.grade]].map(([k, v]) => <Field key={k} label={k}><Input className="ro" readOnly value={v || ''} /></Field>)}</div></div></Card>
     <Card className="mt" title="Other Information" icon="shield"><div className="grid g2"><Kv rows={[['Marital Status', u.marital_status], ['Dependent Family Members', 'See Emergency & Family'], ['Medical Conditions', u.medical_conditions]]} /><Kv rows={[['Allergies', u.allergies], ['Special Notes', u.special_notes]]} /></div></Card>
     {edit && <PersonalModal u={u} onClose={() => setEdit(false)} />}</>);
@@ -157,7 +195,7 @@ export function ProfileView({ data }) {
   return (<>
     <PageHead title="My Profile" sub="Manage your personal information, travel preferences and account settings." />
     <div className="grid" style={{ gridTemplateColumns: '1.2fr 2fr', marginBottom: 14 }}>
-      <Card><div className="row"><Avatar name={u.name} size="lg" /><div className="stack" style={{ gap: 4 }}><h2>{u.name}</h2><div className="small">{u.emp_id} | {u.role === 'employee' ? 'Employee' : u.designation}</div><div className="small muted"><Icon name="building" size={13} /> {u.department} Department</div><div className="small muted"><Icon name="user" size={13} /> {u.designation}</div><div className="small muted"><Icon name="mail" size={13} /> {u.email}</div><div className="small muted"><Icon name="phone" size={13} /> {u.phone}</div><div className="small muted"><Icon name="pin" size={13} /> {u.location}</div></div></div></Card>
+      <Card><div className="row"><Avatar name={u.name} src={u.photo_url} size="lg" /><div className="stack" style={{ gap: 4 }}><h2>{u.name}</h2><div className="small">{u.emp_id} | {u.role === 'employee' ? 'Employee' : u.designation}</div><div className="small muted"><Icon name="building" size={13} /> {u.department} Department</div><div className="small muted"><Icon name="user" size={13} /> {u.designation}</div><div className="small muted"><Icon name="mail" size={13} /> {u.email}</div><div className="small muted"><Icon name="phone" size={13} /> {u.phone}</div><div className="small muted"><Icon name="pin" size={13} /> {u.location}</div></div></div></Card>
       <div className="grid g4"><Stat icon="file" value={stats.documents} label="Travel Documents" sub={`${stats.documentsValid} valid`} /><Stat icon="card" value={stats.payments} label="Payment Methods" sub="Active" /><Stat icon="plane" value={stats.flyers} label="Frequent Flyer" sub="Linked" /><Stat icon="shield" tone="red" value={stats.emergency} label="Emergency Contact" sub="Added" iconColor="#d11a2a" /></div></div>
     <Tabs value={tab} onChange={(t) => nav.set({ tab: t }, true)} tabs={tabs.map(([key, label, icon]) => ({ key, label, icon }))} />
     {tab === 'personal' && <PersonalTab u={u} manager={data.manager} />}

@@ -30,7 +30,7 @@ export function TripDetailView({ user, data }) {
     <Link href="/trips" className="small">‹ Back to Trips</Link>
     <div className="page-head mt-sm" style={{ marginTop: 6 }}>
       <div><h1>Trip No. {trip.trip_no} <Badge>{trip.status}</Badge></h1><p>{trip.title}</p><div className="row wrap small muted"><span><Icon name="calendar" size={14} /> {range(trip.dep_date, trip.ret_date)} ({nightsOf(trip.dep_date, trip.ret_date) + 1} days)</span><span><Icon name="plane" size={14} /> {trip.dep_city} → {trip.dest_city}, {trip.dest_country}</span><span><Icon name="briefcase" size={14} /> {trip.purpose}</span><span><Icon name="user" size={14} /> {traveller.name} ({traveller.emp_id})</span></div></div>
-      <div style={{ minWidth: 420 }}><Steps steps={tracker.map((t) => ({ ...t, sub: t.date }))} /></div>
+      <div className="trip-progress"><Steps steps={tracker.map((t) => ({ ...t, sub: t.date }))} /></div>
     </div>
     {info && isOwner && <div className="warn mb"><b>More information requested:</b> {info.comment} — edit the request and resubmit.</div>}
     {trip.status === 'Rejected' && <div className="err mb"><b>Rejected:</b> {approvals.find((a) => a.status === 'Rejected')?.comment}</div>}
@@ -43,7 +43,7 @@ export function TripDetailView({ user, data }) {
       <Btn variant="outline" icon="copy" onClick={async () => { const r = await api('POST', `/trips/${trip.id}/copy`, {}, { refresh: false }); if (r.ok) router.push(`/trips/${r.data.id}`); }}>Copy & Create</Btn>
       {can.cancel && <Btn variant="danger" onClick={() => setCancel(true)}>Cancel Trip</Btn>}
     </div>
-    <div className="main-side" style={{ gridTemplateColumns: 'minmax(0,1fr) 320px' }}>
+    <div className="main-side" style={{ '--side-width': '320px' }}>
       <div className="stack">
         {can.book ? (<>
           <div className="grid g5">{tiles.map((t) => { const def = serviceTileDefs.find((d) => d[0] === t.type); return (

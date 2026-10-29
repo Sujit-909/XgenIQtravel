@@ -57,7 +57,26 @@ export function readiness(db, user, q = {}) {
   const sc = tripScopeSql(db, user, user.role === 'manager' ? 'team' : 'all');
   const days = Number(q.days || 30);
   const trips = db.all(`SELECT t.*, u.name traveller_name, u.emp_id FROM trips t JOIN users u ON u.id=t.traveller_id WHERE ${sc.where} AND t.status IN ('Approved','Booking In Progress') AND t.dep_date>=? AND t.dep_date<=? ORDER BY t.dep_date`, ...sc.params, today(), addDays(today(), days));
-  const rows = trips.map((t) => assess(db, t));
+  // Request-local snapshots avoid five round trips per trip; never cache employee data.
+  const snapshots = new Map();
+  for (let start = 0; start < trips.length; start += 400) {
+    const batch = trips.slice(start, start + 400);
+    const tripIds = batch.map((t) => t.id);
+    const userIds = [...new Set(batch.map((t) => t.traveller_id))];
+    const placeholders = (ids) => ids.map(() => '?').join(',');
+    const group = (rows, key) => {
+      const map = new Map();
+      for (const row of rows) { if (!map.has(row[key])) map.set(row[key], []); map.get(row[key]).push(row); }
+      return map;
+    };
+    const users = new Map(db.all(`SELECT * FROM users WHERE id IN (${placeholders(userIds)})`, ...userIds).map((u) => [u.id, u]));
+    const bookings = group(db.all(`SELECT * FROM bookings WHERE trip_id IN (${placeholders(tripIds)}) AND status!='Cancelled'`, ...tripIds), 'trip_id');
+    const failed = group(db.all(`SELECT * FROM services WHERE trip_id IN (${placeholders(tripIds)}) AND status='Failed'`, ...tripIds), 'trip_id');
+    const documents = group(db.all(`SELECT * FROM documents WHERE user_id IN (${placeholders(userIds)})`, ...userIds), 'user_id');
+    const emergency = new Set(db.all(`SELECT DISTINCT user_id FROM emergency_contacts WHERE user_id IN (${placeholders(userIds)})`, ...userIds).map((r) => r.user_id));
+    for (const t of batch) snapshots.set(t.id, { traveller: users.get(t.traveller_id), bookings: bookings.get(t.id) || [], failed: failed.get(t.id) || [], documents: documents.get(t.traveller_id) || [], emergency: emergency.has(t.traveller_id) });
+  }
+  const rows = trips.map((t) => assess(db, t, snapshots.get(t.id)));
   const filtered = rows.filter((r) => (!q.risk || q.risk === 'All' || r.risk === q.risk) && (!q.readiness || q.readiness === 'All' || r.readiness === q.readiness) && (!q.q || `${r.trip_no} ${r.traveller_name} ${r.dest_city}`.toLowerCase().includes(String(q.q).toLowerCase())));
   const expiring = db.get(`SELECT COUNT(*) c FROM documents d JOIN users u ON u.id=d.user_id WHERE d.expiry_date IS NOT NULL AND d.expiry_date<=? AND d.expiry_date>=? AND u.id IN (SELECT t.traveller_id FROM trips t WHERE ${sc.where})`, addDays(today(), 60), today(), ...sc.params).c;
   const disruptions = db.get(`SELECT COUNT(*) c FROM services s JOIN trips t ON t.id=s.trip_id WHERE ${sc.where} AND s.status='Failed'`, ...sc.params).c
@@ -66,18 +85,18 @@ export function readiness(db, user, q = {}) {
   const { size, page, offset } = pg(q, 5);
   return { rows: filtered.slice(offset, offset + size), total: filtered.length, page, size, kpis, lastUpdated: nowIso() };
 }
-export function assess(db, t) {
-  const trav = db.get('SELECT * FROM users WHERE id=?', t.traveller_id);
-  const bks = db.all("SELECT * FROM bookings WHERE trip_id=? AND status!='Cancelled'", t.id);
+export function assess(db, t, snapshot) {
+  const trav = snapshot ? snapshot.traveller : db.get('SELECT * FROM users WHERE id=?', t.traveller_id);
+  const bks = snapshot ? snapshot.bookings : db.all("SELECT * FROM bookings WHERE trip_id=? AND status!='Cancelled'", t.id);
   const confirmed = (type) => bks.some((b) => b.type === type && ['Confirmed', 'Completed', 'Changed'].includes(b.status));
   const pending = (type) => bks.some((b) => b.type === type && !['Confirmed', 'Completed', 'Changed'].includes(b.status));
-  const failed = db.all("SELECT * FROM services WHERE trip_id=? AND status='Failed'", t.id);
+  const failed = snapshot ? snapshot.failed : db.all("SELECT * FROM services WHERE trip_id=? AND status='Failed'", t.id);
   const intl = t.travel_type === 'International';
-  const docs = db.all('SELECT * FROM documents WHERE user_id=?', t.traveller_id);
+  const docs = snapshot ? snapshot.documents : db.all('SELECT * FROM documents WHERE user_id=?', t.traveller_id);
   const visa = docs.find((d) => d.doc_type === 'Visa' && d.country === t.dest_country && d.expiry_date >= t.ret_date);
   const passport = docs.find((d) => d.doc_type === 'Passport');
   const passOk = passport && passport.expiry_date >= addDays(t.ret_date, 183);
-  const emergency = !!db.get('SELECT 1 x FROM emergency_contacts WHERE user_id=?', t.traveller_id);
+  const emergency = snapshot ? snapshot.emergency : !!db.get('SELECT 1 x FROM emergency_contacts WHERE user_id=?', t.traveller_id);
   const lead = daysBetween(today(), t.dep_date);
   const checklist = [
     { key: 'flight', label: 'Flight Ticket', status: confirmed('flight') ? 'Confirmed' : pending('flight') ? 'Pending' : failed.some((f) => f.type === 'flight') ? 'Failed' : 'Not Confirmed', critical: t.travel_mode === 'Flight' },
@@ -176,8 +195,11 @@ export function report(db, user, type) {
       .map((r) => [r.trip_no, r.tn, r.dest_city, r.status, money(r.est_budget), money(r.booked), money(r.exp), money(r.est_budget - Math.max(r.booked, r.exp))]);
   } else if (type === 'department_spend') {
     columns = ['Department', 'Trips', 'Booked amount', 'Expenses claimed'];
+    // One grouped expense read replaces one query per displayed department.
+    // Preserve the existing report's expense scope and rounding rules.
+    const expenses = new Map(db.all(`SELECT u.department d, COALESCE(SUM((i.amount+i.tax)*i.fx_rate),0) s FROM expense_items i JOIN expense_reports e ON e.id=i.report_id JOIN users u ON u.id=e.user_id GROUP BY u.department`).map((r) => [r.d, r.s]));
     rows = db.all(`SELECT u.department d, COUNT(DISTINCT t.id) n, COALESCE(SUM(b.amount),0) booked FROM trips t JOIN users u ON u.id=t.traveller_id LEFT JOIN bookings b ON b.trip_id=t.id AND b.status!='Cancelled' WHERE ${sc.where} GROUP BY u.department ORDER BY booked DESC`, ...sc.params)
-      .map((r) => [r.d, r.n, money(r.booked), money(db.get("SELECT COALESCE(SUM((i.amount+i.tax)*i.fx_rate),0) s FROM expense_items i JOIN expense_reports e ON e.id=i.report_id JOIN users u ON u.id=e.user_id WHERE u.department=?", r.d).s)]);
+      .map((r) => [r.d, r.n, money(r.booked), money(r.d == null ? 0 : expenses.get(r.d) || 0)]);
   } else if (type === 'supplier_spend') {
     columns = ['Supplier', 'Type', 'Bookings', 'Amount']; rows = db.all("SELECT supplier, type, COUNT(*) n, SUM(amount) a FROM bookings WHERE status!='Cancelled' GROUP BY supplier, type ORDER BY a DESC").map((r) => [r.supplier, r.type, r.n, money(r.a)]);
   } else if (type === 'policy_exceptions') {

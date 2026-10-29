@@ -1,0 +1,448 @@
+{
+  "mode": "start",
+  "label": "before",
+  "conditions": "Local Chrome headless, 1440x900, no CPU/network throttling, isolated app seed, sequential roles; navigation timings include 100ms settling and 20ms polling. Load metrics are not hydration timings.",
+  "login": {
+    "route": "/login",
+    "ttfbMs": 277.40000009536743,
+    "domContentLoadedMs": 312.60000002384186,
+    "loadMs": 379.5,
+    "jsBytes": 118942,
+    "resourceCount": 14
+  },
+  "roles": [
+    {
+      "role": "employee",
+      "dashboard": {
+        "route": "/dashboard",
+        "ttfbMs": 25.799999952316284,
+        "domContentLoadedMs": 79.39999997615814,
+        "loadMs": 85.59999990463257,
+        "jsBytes": 120095,
+        "resourceCount": 32
+      },
+      "routes": [
+        {
+          "route": "/trips",
+          "navigationMs": 165
+        },
+        {
+          "route": "/bookings",
+          "navigationMs": 185
+        },
+        {
+          "route": "/expenses",
+          "navigationMs": 164
+        },
+        {
+          "route": "/approvals",
+          "ttfbMs": 23.299999952316284,
+          "domContentLoadedMs": 42.89999997615814,
+          "loadMs": 50.199999928474426,
+          "jsBytes": 120122,
+          "resourceCount": 25
+        },
+        {
+          "route": "/notifications",
+          "navigationMs": 148
+        },
+        {
+          "route": "/profile",
+          "navigationMs": 150
+        }
+      ],
+      "apis": [
+        {
+          "url": "/auth/me",
+          "status": 200,
+          "medianMs": 8.399999976158142,
+          "samples": [
+            6.600000023841858,
+            7,
+            8.399999976158142,
+            9.100000023841858,
+            9.699999928474426
+          ]
+        },
+        {
+          "url": "/trips",
+          "status": 200,
+          "medianMs": 7.399999976158142,
+          "samples": [
+            6.699999928474426,
+            6.700000047683716,
+            7.399999976158142,
+            9.100000023841858,
+            10.600000023841858
+          ]
+        },
+        {
+          "url": "/bookings",
+          "status": 200,
+          "medianMs": 6.700000047683716,
+          "samples": [
+            5.5,
+            6.5,
+            6.700000047683716,
+            6.799999952316284,
+            10.100000023841858
+          ]
+        },
+        {
+          "url": "/expenses",
+          "status": 200,
+          "medianMs": 7.399999976158142,
+          "samples": [
+            6.699999928474426,
+            6.700000047683716,
+            7.399999976158142,
+            7.799999952316284,
+            7.900000095367432
+          ]
+        },
+        {
+          "url": "/approvals",
+          "status": 200,
+          "medianMs": 7.399999976158142,
+          "samples": [
+            5.5,
+            7,
+            7.399999976158142,
+            7.899999976158142,
+            8.299999952316284
+          ]
+        }
+      ],
+      "logout": 200,
+      "usersStatus": 403
+    },
+    {
+      "role": "manager",
+      "dashboard": {
+        "route": "/dashboard",
+        "ttfbMs": 40.10000002384186,
+        "domContentLoadedMs": 60.39999997615814,
+        "loadMs": 61,
+        "jsBytes": 120095,
+        "resourceCount": 24
+      },
+      "routes": [
+        {
+          "route": "/trips",
+          "navigationMs": 147
+        },
+        {
+          "route": "/bookings",
+          "navigationMs": 167
+        },
+        {
+          "route": "/expenses",
+          "navigationMs": 152
+        },
+        {
+          "route": "/approvals",
+          "navigationMs": 148
+        },
+        {
+          "route": "/notifications",
+          "navigationMs": 133
+        },
+        {
+          "route": "/profile",
+          "navigationMs": 150
+        }
+      ],
+      "apis": [
+        {
+          "url": "/auth/me",
+          "status": 200,
+          "medianMs": 8.800000071525574,
+          "samples": [
+            5.5,
+            6.100000023841858,
+            8.800000071525574,
+            9.199999928474426,
+            9.600000023841858
+          ]
+        },
+        {
+          "url": "/trips",
+          "status": 200,
+          "medianMs": 6.100000023841858,
+          "samples": [
+            5.100000023841858,
+            5.899999976158142,
+            6.100000023841858,
+            6.700000047683716,
+            8.199999928474426
+          ]
+        },
+        {
+          "url": "/bookings",
+          "status": 200,
+          "medianMs": 4.400000095367432,
+          "samples": [
+            4.100000023841858,
+            4.200000047683716,
+            4.400000095367432,
+            5.100000023841858,
+            5.399999976158142
+          ]
+        },
+        {
+          "url": "/expenses",
+          "status": 200,
+          "medianMs": 4.100000023841858,
+          "samples": [
+            3.700000047683716,
+            4,
+            4.100000023841858,
+            4.299999952316284,
+            4.399999976158142
+          ]
+        },
+        {
+          "url": "/approvals",
+          "status": 200,
+          "medianMs": 4,
+          "samples": [
+            3.9000000953674316,
+            4,
+            4,
+            4,
+            4.699999928474426
+          ]
+        }
+      ],
+      "logout": 200,
+      "usersStatus": 403
+    },
+    {
+      "role": "finance",
+      "dashboard": {
+        "route": "/dashboard",
+        "ttfbMs": 12.5,
+        "domContentLoadedMs": 32.200000047683716,
+        "loadMs": 32.5,
+        "jsBytes": 120095,
+        "resourceCount": 25
+      },
+      "routes": [
+        {
+          "route": "/trips",
+          "ttfbMs": 21.199999928474426,
+          "domContentLoadedMs": 52.89999997615814,
+          "loadMs": 53.699999928474426,
+          "jsBytes": 129107,
+          "resourceCount": 22
+        },
+        {
+          "route": "/bookings",
+          "ttfbMs": 17.300000071525574,
+          "domContentLoadedMs": 39.10000002384186,
+          "loadMs": 39.89999997615814,
+          "jsBytes": 123355,
+          "resourceCount": 22
+        },
+        {
+          "route": "/expenses",
+          "navigationMs": 145
+        },
+        {
+          "route": "/approvals",
+          "ttfbMs": 15.299999952316284,
+          "domContentLoadedMs": 31.199999928474426,
+          "loadMs": 31.899999976158142,
+          "jsBytes": 120122,
+          "resourceCount": 19
+        },
+        {
+          "route": "/notifications",
+          "navigationMs": 146
+        },
+        {
+          "route": "/profile",
+          "navigationMs": 133
+        }
+      ],
+      "apis": [
+        {
+          "url": "/auth/me",
+          "status": 200,
+          "medianMs": 5.899999976158142,
+          "samples": [
+            3.8000000715255737,
+            4.600000023841858,
+            5.899999976158142,
+            8.399999976158142,
+            11.899999976158142
+          ]
+        },
+        {
+          "url": "/trips",
+          "status": 200,
+          "medianMs": 4.700000047683716,
+          "samples": [
+            4.200000047683716,
+            4.5,
+            4.700000047683716,
+            4.799999952316284,
+            6.399999976158142
+          ]
+        },
+        {
+          "url": "/bookings",
+          "status": 200,
+          "medianMs": 4.5,
+          "samples": [
+            3.6999999284744263,
+            3.8000000715255737,
+            4.5,
+            4.699999928474426,
+            5.5
+          ]
+        },
+        {
+          "url": "/expenses",
+          "status": 200,
+          "medianMs": 4.5,
+          "samples": [
+            3.8000000715255737,
+            3.899999976158142,
+            4.5,
+            4.799999952316284,
+            4.899999976158142
+          ]
+        },
+        {
+          "url": "/approvals",
+          "status": 200,
+          "medianMs": 3.8000000715255737,
+          "samples": [
+            3.700000047683716,
+            3.799999952316284,
+            3.8000000715255737,
+            4,
+            4.299999952316284
+          ]
+        }
+      ],
+      "logout": 200,
+      "usersStatus": 403
+    },
+    {
+      "role": "admin",
+      "dashboard": {
+        "route": "/dashboard",
+        "ttfbMs": 8.699999928474426,
+        "domContentLoadedMs": 30.199999928474426,
+        "loadMs": 30.5,
+        "jsBytes": 120095,
+        "resourceCount": 21
+      },
+      "routes": [
+        {
+          "route": "/trips",
+          "navigationMs": 163
+        },
+        {
+          "route": "/bookings",
+          "ttfbMs": 18.600000023841858,
+          "domContentLoadedMs": 37,
+          "loadMs": 37.700000047683716,
+          "jsBytes": 123355,
+          "resourceCount": 23
+        },
+        {
+          "route": "/expenses",
+          "ttfbMs": 11.100000023841858,
+          "domContentLoadedMs": 33.700000047683716,
+          "loadMs": 34.40000009536743,
+          "jsBytes": 127759,
+          "resourceCount": 28
+        },
+        {
+          "route": "/approvals",
+          "ttfbMs": 16.799999952316284,
+          "domContentLoadedMs": 43.09999990463257,
+          "loadMs": 43.59999990463257,
+          "jsBytes": 120122,
+          "resourceCount": 21
+        },
+        {
+          "route": "/notifications",
+          "navigationMs": 144
+        },
+        {
+          "route": "/profile",
+          "navigationMs": 139
+        }
+      ],
+      "apis": [
+        {
+          "url": "/auth/me",
+          "status": 200,
+          "medianMs": 5.899999976158142,
+          "samples": [
+            5.199999928474426,
+            5.700000047683716,
+            5.899999976158142,
+            9,
+            10.600000023841858
+          ]
+        },
+        {
+          "url": "/trips",
+          "status": 200,
+          "medianMs": 5.299999952316284,
+          "samples": [
+            4.600000023841858,
+            4.600000023841858,
+            5.299999952316284,
+            5.600000023841858,
+            6.5
+          ]
+        },
+        {
+          "url": "/bookings",
+          "status": 200,
+          "medianMs": 4.100000023841858,
+          "samples": [
+            3.799999952316284,
+            3.899999976158142,
+            4.100000023841858,
+            5,
+            5
+          ]
+        },
+        {
+          "url": "/expenses",
+          "status": 200,
+          "medianMs": 4.5,
+          "samples": [
+            4,
+            4.299999952316284,
+            4.5,
+            4.899999976158142,
+            7.300000071525574
+          ]
+        },
+        {
+          "url": "/approvals",
+          "status": 200,
+          "medianMs": 3.700000047683716,
+          "samples": [
+            3.5,
+            3.600000023841858,
+            3.700000047683716,
+            4,
+            4.399999976158142
+          ]
+        }
+      ],
+      "logout": 200,
+      "usersStatus": 200
+    }
+  ],
+  "errors": []
+}

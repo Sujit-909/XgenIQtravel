@@ -1,15 +1,18 @@
 // Server-component session helpers (use next/headers).
 import { cookies } from 'next/headers';
+import { cache } from 'react';
 import { redirect, notFound } from 'next/navigation';
 import { getDb } from './db';
 import { userFromToken, SESSION_COOKIE } from './services/auth';
 
-export async function currentUser() {
+// React's server-render cache is request-local: layout and page share one
+// validated lookup, while subsequent requests always recheck the active user.
+export const currentUser = cache(async function currentUser() {
   const jar = await cookies();
   const token = jar.get(SESSION_COOKIE)?.value;
   if (!token) return null;
   return userFromToken(getDb(), token);
-}
+});
 export async function requireUser(roles) {
   const u = await currentUser();
   if (!u) redirect('/login');
