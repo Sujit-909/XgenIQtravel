@@ -12,7 +12,8 @@ export function listReimbursements(db, user, q = {}) {
   const w = []; const p = [];
   if (q.department && q.department !== 'All') { w.push('u.department=?'); p.push(q.department); }
   if (q.status && q.status !== 'All') { w.push('r.status=?'); p.push(q.status); }
-  if (q.payment_status && q.payment_status !== 'All') { w.push('rb.status=?'); p.push(q.payment_status); }
+  if (q.payment_status === 'Failed / Returned') w.push("rb.status IN ('Failed','Returned')");
+  else if (q.payment_status && q.payment_status !== 'All') { w.push('rb.status=?'); p.push(q.payment_status); }
   if (q.q) { w.push('(r.report_no LIKE ? OR u.name LIKE ? OR t.trip_no LIKE ?)'); const s = `%${q.q}%`; p.push(s, s, s); }
   const from = `FROM expense_reports r JOIN users u ON u.id=r.user_id LEFT JOIN trips t ON t.id=r.trip_id LEFT JOIN reimbursements rb ON rb.report_id=r.id WHERE r.status IN ('Submitted','Manager Approved','Finance Approved','Posted') ${w.length ? `AND ${w.join(' AND ')}` : ''}`;
   const { size, page, offset } = pg(q, 5);
@@ -127,7 +128,8 @@ export function listRefunds(db, user, q = {}) {
     else { w.push('b.traveller_id=?'); p.push(user.id); }
   }
   if (q.type && q.type !== 'All') { w.push('b.type=?'); p.push(q.type); }
-  if (q.status && q.status !== 'All') { w.push('r.status=?'); p.push(q.status); }
+  if (q.status === 'Unresolved') w.push("r.status NOT IN ('Credited','Rejected','Not Applicable')");
+  else if (q.status && q.status !== 'All') { w.push('r.status=?'); p.push(q.status); }
   if (q.q) { w.push('(b.booking_no LIKE ? OR b.supplier_ref LIKE ? OR u.name LIKE ? OR b.route LIKE ?)'); const s = `%${q.q}%`; p.push(s, s, s, s); }
   const from = `FROM refunds r JOIN bookings b ON b.id=r.booking_id JOIN users u ON u.id=b.traveller_id ${w.length ? `WHERE ${w.join(' AND ')}` : ''}`;
   const { size, page, offset } = pg(q, 8);
@@ -206,7 +208,7 @@ export function reconciliation(db, user, q = {}) {
     .map((r) => ({ ...r, match: r.resolved ? 'Matched' : matchStatus(r), netCost: round2(r.amount - (r.actual_refund || 0)) }));
   let filtered = rows;
   if (q.supplier && q.supplier !== 'All') filtered = filtered.filter((r) => r.supplier === q.supplier);
-  if (q.match && q.match !== 'All') filtered = filtered.filter((r) => r.match === q.match);
+  if (q.match && q.match !== 'All') filtered = filtered.filter((r) => q.match === 'Missing Invoice' ? !r.invoice_id : r.match === q.match);
   if (q.erp && q.erp !== 'All') filtered = filtered.filter((r) => r.erp_status === q.erp);
   if (q.type && q.type !== 'All') filtered = filtered.filter((r) => r.type === q.type);
   if (q.q) { const s = String(q.q).toLowerCase(); filtered = filtered.filter((r) => [r.trip_no, r.booking_no, r.ref, r.invoice_no, r.supplier].some((x) => String(x || '').toLowerCase().includes(s))); }

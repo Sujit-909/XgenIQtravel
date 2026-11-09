@@ -1,5 +1,8 @@
 node_modules
 .next
+.next-dev
+next-env.d.ts
+*.tsbuildinfo
 data/*.db
 data/*.db-*
 data/uploads

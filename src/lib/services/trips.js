@@ -272,10 +272,18 @@ export function listTrips(db, user, q = {}) {
   const scope = q.scope || (user.role === 'employee' ? 'mine' : user.role === 'manager' ? 'team' : 'all');
   const sc = tripScopeSql(db, user, scope);
   const where = [sc.where]; const params = [...sc.params];
+  if (['upcoming', 'waiting'].includes(q.view)) {
+    if (user.role === 'manager' && q.scope !== 'mine') { const ids = teamIds(db, user.id); where.push('t.traveller_id IN (' + ids.map(() => '?').join(',') + ')'); params.push(...ids); }
+    else if (user.role === 'employee' || q.scope === 'mine') { where.push('t.traveller_id=?'); params.push(user.id); }
+  }
+  if (q.view === 'upcoming') { where.push("t.status IN ('Approved','Booking In Progress','Travel In Progress') AND t.ret_date>=?"); params.push(today()); }
+  if (q.view === 'waiting') where.push("(t.status='Pending for Review' OR EXISTS (SELECT 1 FROM services s WHERE s.trip_id=t.id AND s.status IN ('Submitted','Awaiting Information') AND s.desk_stage='Traveller Info'))");
   if (q.status && q.status !== 'All') { where.push('t.status=?'); params.push(q.status); }
   if (q.purpose && q.purpose !== 'All') { where.push('t.purpose=?'); params.push(q.purpose); }
   if (q.travel_type && q.travel_type !== 'All') { where.push('t.travel_type=?'); params.push(q.travel_type); }
   if (q.department && q.department !== 'All') { where.push('t.department=?'); params.push(q.department); }
+  if (q.destination && q.destination !== 'All') { where.push('t.dest_city=?'); params.push(q.destination); }
+  if (q.traveller_id && q.traveller_id !== 'All') { where.push('t.traveller_id=?'); params.push(q.traveller_id); }
   if (isDate(q.from)) { where.push('t.dep_date>=?'); params.push(q.from); }
   if (isDate(q.to)) { where.push('t.dep_date<=?'); params.push(q.to); }
   if (q.q) { where.push('(t.trip_no LIKE ? OR t.title LIKE ? OR t.dest_city LIKE ? OR u.name LIKE ?)'); const s = `%${q.q}%`; params.push(s, s, s, s); }
@@ -284,8 +292,8 @@ export function listTrips(db, user, q = {}) {
   const total = db.get(`SELECT COUNT(*) c ${base}`, ...params).c;
   const rows = db.all(`SELECT t.*, u.name traveller_name, u.emp_id traveller_emp ${base} ORDER BY t.dep_date DESC, t.id DESC LIMIT ? OFFSET ?`, ...params, size, offset);
   // aggregates over the whole scope (ignoring filters)
-  const all = db.all(`SELECT t.id,t.status,t.created_at,t.submitted_at FROM trips t WHERE ${sc.where}`, ...sc.params);
-  const month = today().slice(0, 7); const prevM = new Date(); prevM.setUTCMonth(prevM.getUTCMonth() - 1); const prev = prevM.toISOString().slice(0, 7);
+  const all = db.all(`SELECT t.id,t.status,t.created_at,t.submitted_at,t.department,t.dest_city,t.traveller_id,u.name traveller_name FROM trips t JOIN users u ON u.id=t.traveller_id WHERE ${sc.where}`, ...sc.params);
+  const month = today().slice(0, 7); const prevM = new Date(); prevM.setUTCDate(1); prevM.setUTCMonth(prevM.getUTCMonth() - 1); const prev = prevM.toISOString().slice(0, 7);
   const inM = (a, m) => all.filter((x) => String(x.created_at).startsWith(m) && a(x)).length;
   const counts = Object.fromEntries(TRIP_STATUSES.map((s) => [s, all.filter((x) => x.status === s).length]));
   const approvalHours = db.all(`SELECT t.status, AVG((julianday(a.acted_at)-julianday(t.submitted_at))*24) h FROM trips t JOIN approvals a ON a.entity_type='trip' AND a.entity_id=t.id AND a.acted_at IS NOT NULL
@@ -300,8 +308,11 @@ export function listTrips(db, user, q = {}) {
     completed: counts.Closed, completedDelta: pct(inM(sel(['Closed']), month), inM(sel(['Closed']), prev)),
   };
   const byStatus = TRIP_STATUSES.map((s) => ({ status: s, count: counts[s], thisMonth: inM(sel([s]), month), avgApproval: fmtH(hrs[s]), pct: all.length ? Math.round((counts[s] / all.length) * 1000) / 10 : 0 }));
-  const departments = db.all(`SELECT DISTINCT t.department d FROM trips t WHERE ${sc.where} AND t.department IS NOT NULL ORDER BY 1`, ...sc.params).map((r) => r.d);
-  return { rows, total, page, size, kpis, counts, byStatus, departments, scope };
+  const departments = [...new Set(all.map((t) => t.department).filter(Boolean))].sort();
+  const destinations = [...new Set(all.map((t) => t.dest_city).filter(Boolean))].sort();
+  const travellers = [...new Map(all.map((t) => [t.traveller_id, { id: t.traveller_id, name: t.traveller_name }])).values()].sort((a, b) => a.name.localeCompare(b.name));
+  const filterToday = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+  return { rows, total, page, size, kpis, counts, byStatus, departments, destinations, travellers, filterToday, scope };
 }
 
 export function trackerFor(t, hasBookingConfirmed = false) {
@@ -325,9 +336,13 @@ export function getTrip(db, user, id) {
   const wf = approvals.length ? null : computeWorkflow(db, t, traveller);
   const history = db.all("SELECT ts,actor_name,action,detail FROM audit_log WHERE entity_type='trip' AND entity_id=? ORDER BY id DESC LIMIT 50", id);
   const reports = db.all('SELECT id,report_no,status FROM expense_reports WHERE trip_id=?', id);
+  const flightOptions = db.all('SELECT id,snapshot,created_at FROM flight_options WHERE trip_id=? ORDER BY created_at DESC', id).map((o) => ({ ...o, snapshot: json(o.snapshot, {}) }));
+  const planned = json(db.get('SELECT payload FROM assistant_travel_plans WHERE trip_id=?', id)?.payload, null);
+  const agentPlan = planned ? { flight: planned.flight_selection?.selected || [], hotel: planned.hotel_selection ? { name: planned.hotel_selection.hotel.name, address: planned.hotel_selection.hotel.address, nightly: planned.hotel_selection.rate?.nightly?.amount ?? planned.hotel_selection.hotel.nightly.amount, total: planned.hotel_selection.rate?.total?.amount ?? planned.hotel_selection.hotel.total.amount } : null,
+    check_in: planned.check_in || planned.departure, check_out: planned.check_out || planned.return_date, guests: planned.guests, rooms: planned.rooms, special_requirements: planned.special_requirements } : null;
   return {
-    trip: { ...t, extra_reqs: json(t.extra_reqs, []) }, traveller, creator, approvals, workflow: wf, services, bookings, files, history, reports,
-    tracker: trackerFor(t), summary: { utilized, balance: t.est_budget - utilized },
+    trip: { ...t, extra_reqs: json(t.extra_reqs, []) }, traveller, creator, approvals, workflow: wf, services, bookings, files, history, reports, flightOptions,
+    agentPlan, tracker: trackerFor(t), summary: { utilized, balance: t.est_budget - utilized },
     can: { edit: canEditTrip(user, t) && ['Draft', 'Pending for Review'].includes(t.status), cancel: canEditTrip(user, t) && !['Closed', 'Cancelled', 'Rejected'].includes(t.status),
       book: ['Approved', 'Booking In Progress', 'Travel In Progress'].includes(t.status), expense: ['Approved', 'Booking In Progress', 'Travel In Progress', 'Expenses Pending', 'Closed'].includes(t.status),
       close: canEditTrip(user, t) && !['Closed', 'Cancelled', 'Rejected', 'Draft'].includes(t.status) },

@@ -1,5 +1,6 @@
 import { json } from '../db';
-import { bad, conflict, forbidden, notFound, nowIso, today, isDate, num, page as pg, seq, pad, audit, notify, comment, getSetting, insert } from '../util';
+import { evaluateHotel } from './policy';
+import { bad, conflict, forbidden, notFound, nowIso, today, daysBetween, isDate, num, page as pg, seq, pad, audit, notify, comment, getSetting, insert } from '../util';
 import { createChain } from './chain';
 
 export const STAGES = ['Awaiting Agency Quote', 'Traveller Info', 'Approval Pending', 'Booking in Progress', 'Ticketing Pending', 'Failed / Issues'];
@@ -102,7 +103,7 @@ export function deskAction(db, user, id, input) {
 // Traveller replies / accepts a quote
 export function travellerRespond(db, user, id, input) {
   return db.tx(() => {
-    const s = db.get('SELECT s.*, t.traveller_id, t.est_budget, t.id tid, t.trip_no FROM services s JOIN trips t ON t.id=s.trip_id WHERE s.id=?', id);
+    const s = db.get('SELECT s.*, t.traveller_id, t.est_budget, t.id tid, t.trip_no, t.travel_type, t.dest_country FROM services s JOIN trips t ON t.id=s.trip_id WHERE s.id=?', id);
     if (!s) throw notFound('Service request not found');
     if (s.traveller_id !== user.id && s.created_by !== user.id) throw forbidden();
     if (FINAL.includes(s.status)) throw conflict(`Request is already ${s.status}`);
@@ -122,13 +123,16 @@ export function travellerRespond(db, user, id, input) {
         const used = db.get("SELECT COALESCE(SUM(amount),0) s FROM bookings WHERE trip_id=? AND status NOT IN ('Cancelled')", s.tid).s;
         const over = used + q.amount > s.est_budget * (1 + getSetting(db, 'price_tolerance_pct', 10) / 100);
         const d = json(s.details, {});
+        const selectedHotel = s.type === 'hotel' && d.source === 'SerpApi Google Hotels';
+        const selectionPolicy = selectedHotel ? evaluateHotel(db, { hotel: { city: d.city, pricePerNight: q.amount / Math.max(1, daysBetween(d.check_in, d.check_out)) / Math.max(1, Number(d.rooms) || 1), star: d.hotel_stars }, travelType: s.travel_type, destCountry: s.dest_country }) : { status: 'Compliant', checks: [] };
+        const requiresApproval = over || selectionPolicy.status !== 'Compliant';
         const no = `BK${pad(seq(db, 'booking'), 6)}`;
         const bid = insert(db, 'bookings', { booking_no: no, trip_id: s.tid, service_id: id, traveller_id: s.traveller_id, type: BK_TYPE[s.type], supplier: q.supplier, supplier_ref: null, title: s.type === 'hotel' ? 'Hotel' : s.type === 'flight' ? 'Flight' : 'Service', route: routeOf(s, d), detail: `${q.supplier} ${q.reference || ''}`.trim(),
-          details: { ...d, quote: q.id, refundable: true }, booking_date: today(), travel_date: d.departDate || d.checkIn || d.depart_date || d.check_in || null, end_date: d.checkOut || d.check_out || null, amount: q.amount, status: over ? 'Created' : 'Ticketing Pending', policy_status: over ? 'Exception Required' : 'Compliant', policy_note: over ? 'Exceeds approved trip budget' : null, created_by: user.id, created_at: nowIso() });
-        db.run("UPDATE services SET booking_id=?, provider=?, status=?, desk_stage=?, updated_at=? WHERE id=?", bid, q.supplier, over ? 'Submitted' : 'In Progress', over ? 'Approval Pending' : 'Ticketing Pending', nowIso(), id);
-        if (over) {
+          details: { ...d, quote: q.id, refundable: true }, booking_date: today(), travel_date: d.departDate || d.checkIn || d.depart_date || d.check_in || null, end_date: d.checkOut || d.check_out || null, amount: q.amount, status: requiresApproval ? 'Created' : 'Ticketing Pending', policy_status: requiresApproval ? 'Exception Required' : 'Compliant', policy_note: over ? 'Exceeds approved trip budget' : selectionPolicy.checks.filter((c) => !c.ok).map((c) => c.detail).join('; ') || null, created_by: user.id, created_at: nowIso() });
+        db.run("UPDATE services SET booking_id=?, provider=?, status=?, desk_stage=?, updated_at=? WHERE id=?", bid, q.supplier, requiresApproval ? 'Submitted' : 'In Progress', requiresApproval ? 'Approval Pending' : 'Ticketing Pending', nowIso(), id);
+        if (requiresApproval) {
           const t = db.get('SELECT u.manager_id FROM users u WHERE u.id=?', s.traveller_id);
-          createChain(db, 'booking', bid, [{ label: 'Budget Exception - Reporting Manager', approverId: t.manager_id || getSetting(db, 'emergency_approver_id', null), note: 'Accepted quote exceeds the approved trip budget' }]);
+          createChain(db, 'booking', bid, [{ label: over ? 'Budget Exception - Reporting Manager' : 'Hotel Policy Exception - Reporting Manager', approverId: t.manager_id || getSetting(db, 'emergency_approver_id', null), note: over ? 'Accepted quote exceeds the approved trip budget' : 'Accepted hotel quote requires a policy exception' }]);
         }
         comment(db, 'service', id, user, `Quote from ${q.supplier} accepted`, 'Employee');
       }

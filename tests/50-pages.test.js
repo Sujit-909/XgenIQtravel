@@ -12,7 +12,7 @@ const PAGES = [
   ['emp', '(app)/trips/page.jsx', {}, {}, 'My Trips'], ['mgr', '(app)/trips/page.jsx', {}, { status: 'Approved', page: '1' }, 'Manage Business Trips'], ['admin', '(app)/trips/page.jsx', {}, { q: 'Mumbai' }, 'Recent Business Trips'],
   ['emp', '(app)/trips/new/page.jsx', {}, {}, 'Business Trip Request'],
   ['emp', '(app)/bookings/page.jsx', {}, {}, 'My Bookings'], ['emp', '(app)/bookings/page.jsx', {}, { type: 'hotel', selected: '3' }, 'Booking Details'], ['emp', '(app)/search/page.jsx', {}, {}, 'Fare Comparison'],
-  ['emp', '(app)/assistant/page.jsx', {}, {}, 'Travel Assistant'], ['mgr', '(app)/approvals/page.jsx', {}, {}, 'My Approvals'], ['mgr', '(app)/approvals/page.jsx', {}, { type: 'expense', status: 'All' }, 'Expense Approvals'], ['fin', '(app)/approvals/page.jsx', {}, {}, 'Expense Reports'],
+  ['emp', '(app)/assistant/page.jsx', {}, {}, 'Employee Assistant'], ['mgr', '(app)/approvals/page.jsx', {}, {}, 'My Approvals'], ['mgr', '(app)/approvals/page.jsx', {}, { type: 'expense', status: 'All' }, 'Expense Approvals'], ['fin', '(app)/approvals/page.jsx', {}, {}, 'Expense Reports'],
   ['mgr', '(app)/bookings/page.jsx', {}, {}, 'My Bookings'],
   ['emp', '(app)/expenses/page.jsx', {}, {}, 'Manage Expenses'], ['mgr', '(app)/expenses/page.jsx', {}, { scope: 'team', status: 'Submitted' }, 'Manage Expenses'], ['fin', '(app)/expenses/page.jsx', {}, {}, 'Manage Expenses'], ['emp', '(app)/expenses/new/page.jsx', {}, {}, 'Create Expense Report'],
   ['emp', '(app)/profile/page.jsx', {}, {}, 'My Profile'], ...['prefs', 'docs', 'pay', 'family', 'addr', 'loyalty', 'notif'].map((t) => ['emp', '(app)/profile/page.jsx', {}, { tab: t }, 'My Profile']), ['mgr', '(app)/profile/page.jsx', {}, {}, 'My Profile'],

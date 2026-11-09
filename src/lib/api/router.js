@@ -24,6 +24,25 @@ export function setCookie(name, value, { maxAge, httpOnly = true } = {}) {
 const json = (data, status = 200, headers = {}) => new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store', ...headers } });
 export { json as jsonResponse };
 
+async function limitedJson(req, maxBytes) {
+  if (Number(req.headers.get('content-length') || 0) > maxBytes) throw new HttpError(413, 'Assistant request is too large');
+  const reader = req.body?.getReader();
+  if (!reader) throw new HttpError(400, 'Request body is not valid JSON');
+  const chunks = []; let length = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read(); if (done) break;
+      length += value.byteLength;
+      if (length > maxBytes) { await reader.cancel(); throw new HttpError(413, 'Assistant request is too large'); }
+      chunks.push(value);
+    }
+    return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks)));
+  } catch (error) {
+    if (error instanceof HttpError) throw error;
+    throw new HttpError(400, 'Request body is not valid JSON');
+  } finally { reader.releaseLock(); }
+}
+
 export async function dispatch(req) {
   try {
     const url = new URL(req.url);
@@ -51,8 +70,9 @@ export async function dispatch(req) {
       let body = {}; let form = null;
       if (!['GET', 'HEAD'].includes(method)) {
         const ct = req.headers.get('content-type') || '';
+        if (r.opts.maxBodyBytes && !ct.includes('application/json')) return json({ error: 'Send an application/json request' }, 415);
         if (ct.includes('multipart/form-data')) form = await req.formData();
-        else if (ct.includes('json')) { try { body = await req.json(); } catch { return json({ error: 'Request body is not valid JSON' }, 400); } }
+        else if (ct.includes('json')) { if (r.opts.maxBodyBytes) body = await limitedJson(req, r.opts.maxBodyBytes); else { try { body = await req.json(); } catch { return json({ error: 'Request body is not valid JSON' }, 400); } } }
       }
       const out = await r.handler({ req, db, user, params, query: Object.fromEntries(url.searchParams), body, form });
       if (out instanceof Response) return out;

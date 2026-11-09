@@ -3,22 +3,18 @@ import assert from 'node:assert/strict';
 import { api, fresh, d } from './helpers';
 import { REPORTS } from '@/lib/services/queries';
 
-test('assistant: draft requires explicit confirmation, then creates a submitted trip', async () => {
+test('assistant plans travel without submitting and keeps authorized records inside GENIQ', async () => {
   fresh();
-  const say = async (m) => (await api('emp', 'POST', '/assistant', { message: m })).data.messages.at(-1);
-  let r = await say('I need to travel to Mumbai next week for a client meeting');
-  assert.equal(r.card.type, 'trip_draft'); assert.equal(r.card.to, 'Mumbai'); assert.ok(r.card.estimate > 0);
   const before = (await api('emp', 'GET', '/trips')).data.total;
-  assert.equal((await api('emp', 'GET', '/trips')).data.total, before, 'nothing created before confirmation');
-  r = await say('Yes, please create it'); assert.equal(r.card.type, 'trip_created'); assert.equal(r.card.status, 'Submitted');
-  assert.equal((await api('emp', 'GET', '/trips')).data.total, before + 1);
-  r = await say('I need to travel to Delhi from 12 Nov to 14 Nov'); assert.equal(r.card.dep.slice(5), '11-12');
-  r = await say('no'); assert.match(r.text, /discarded/);
-  r = await say('I attended the client meeting and want to raise reimbursement'); assert.ok(r.actions?.[0]?.href.startsWith('/expenses/new'));
-  r = await say('show my upcoming trips'); assert.equal(r.card.type, 'list');
-  r = await say('what is the hotel policy'); assert.ok(r.card.items.length);
-  assert.match((await say('cancel my flight')).text, /do not cancel bookings from chat/);
-  assert.ok((await api('emp', 'GET', '/assistant')).data.messages.length > 8);
+  const action = (await api('emp', 'POST', '/assistant', { message: 'Create a trip request for Mumbai' })).data;
+  assert.equal(action.answer_kind, 'travel');
+  assert.equal(action.travel.status, null);
+  assert.equal((await api('emp', 'GET', '/trips')).data.total, before);
+  const policy = (await api('emp', 'POST', '/assistant', { message: 'What is our hotel policy?' })).data;
+  assert.equal(policy.answer_kind, 'internal'); assert.ok(policy.answer.includes('policy'));
+  const own = (await api('emp', 'POST', '/assistant', { message: 'Show my travel requests' })).data;
+  assert.equal(own.answer_kind, 'internal');
+  assert.deepEqual((await api('emp', 'GET', '/assistant')).data.messages, []);
 });
 
 test('reconciliation, policy administration and policy test', async () => {

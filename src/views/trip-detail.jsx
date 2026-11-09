@@ -18,6 +18,11 @@ function Chain({ approvals }) {
   );
 }
 
+function PlannedTravel({ plan }) {
+  if (!plan) return null;
+  return <Card title="Selected travel options" icon="plane" className="mb"><p className="note">Employee-selected estimates from the AI travel plan. These are not tickets or hotel reservations; the travel desk must revalidate prices and complete authorized bookings after approval.</p>{plan.flight.map((f,i)=><p key={i}>{f.segments.map(s=>`${s.airline} ${s.flight_number} · ${s.departure.id} ${s.departure.time} → ${s.arrival.id} ${s.arrival.time}`).join(' / ')} · {typeof f.price==='number'?inr(f.price):'Quote unavailable'}</p>)}{plan.hotel&&<p><b>{plan.hotel.name}</b> · {plan.hotel.address}<br/>{plan.check_in} to {plan.check_out} · {plan.guests} adult guest(s), {plan.rooms} room(s) requested · {typeof plan.hotel.total==='number'?inr(plan.hotel.total):'Stay total requires verification'}</p>}{plan.special_requirements&&<p>Special requirements: {plan.special_requirements}</p>}</Card>;
+}
+
 export function TripDetailView({ user, data }) {
   const { trip, traveller, approvals, services, bookings, tracker, summary, can, workflow, files, reports } = data;
   const api = useApi(); const router = useRouter(); const nav = useNav();
@@ -32,6 +37,7 @@ export function TripDetailView({ user, data }) {
       <div><h1>Trip No. {trip.trip_no} <Badge>{trip.status}</Badge></h1><p>{trip.title}</p><div className="row wrap small muted"><span><Icon name="calendar" size={14} /> {range(trip.dep_date, trip.ret_date)} ({nightsOf(trip.dep_date, trip.ret_date) + 1} days)</span><span><Icon name="plane" size={14} /> {trip.dep_city} → {trip.dest_city}, {trip.dest_country}</span><span><Icon name="briefcase" size={14} /> {trip.purpose}</span><span><Icon name="user" size={14} /> {traveller.name} ({traveller.emp_id})</span></div></div>
       <div className="trip-progress"><Steps steps={tracker.map((t) => ({ ...t, sub: t.date }))} /></div>
     </div>
+    <PlannedTravel plan={data.agentPlan} />
     {info && isOwner && <div className="warn mb"><b>More information requested:</b> {info.comment} — edit the request and resubmit.</div>}
     {trip.status === 'Rejected' && <div className="err mb"><b>Rejected:</b> {approvals.find((a) => a.status === 'Rejected')?.comment}</div>}
     <div className="row wrap mb">
@@ -51,6 +57,7 @@ export function TripDetailView({ user, data }) {
           <ServicePanel trip={trip} services={services} type={sel} user={user} />
         </>) : <div className="note">{['Draft', 'Pending for Review'].includes(trip.status) ? 'Submit this request for approval. Booking services unlock once the trip is approved.' : ['Submitted', 'Under Approval'].includes(trip.status) ? 'Awaiting approval. Booking services unlock once the trip is approved.' : 'Booking is not available for this trip status.'}</div>}
         <Card title="Service Requests" icon="list" body={false}><ServiceList services={services} user={user} /></Card>
+        {data.flightOptions?.length > 0 && <Card title="Saved Flight Travel Options" icon="plane" body={false}><DataTable rows={data.flightOptions} columns={[{ key: 'created_at', label: 'Saved', render: (o) => fdt(o.created_at) }, { key: 'route', label: 'Itinerary', render: (o) => o.snapshot.selected.map((r) => r.segments.map((s) => s.departure.id + ' - ' + s.arrival.id + ' (' + s.flight_number + ')').join(', ')).join('; ') }, { key: 'price', label: 'Indicative quote', render: (o) => o.snapshot.indicative_price === null ? 'Not supplied' : inr(o.snapshot.indicative_price) }, { key: 'status', label: 'Status', render: () => <Badge tone="gray">Saved option - not booked</Badge> }]} /></Card>}
         <Card title="Bookings" icon="briefcase" body={false}><DataTable rows={bookings} empty="No bookings yet." columns={[{ key: 'booking_no', label: 'Booking' }, { key: 'type', label: 'Type' }, { key: 'detail', label: 'Details' }, { key: 'travel_date', label: 'Date', render: (b) => fdate(b.travel_date) }, { key: 'amount', label: 'Amount', render: (b) => inr(b.amount) }, { key: 'policy_status', label: 'Policy', render: (b) => (b.policy_status ? <Badge>{b.policy_status}</Badge> : '-') }, { key: 'status', label: 'Status', render: (b) => <Badge>{b.status}</Badge> }]} /></Card>
       </div>
       <div className="stack">
@@ -83,6 +90,7 @@ export function TripItineraryView({ user, data }) {
     <div className="page-head" style={{ marginTop: 6 }}><div><h1>Trip Details – {trip.trip_no} <Badge>{trip.status}</Badge></h1><p>Complete itinerary and service details for your trip in one view.</p></div>
       <div className="row"><Btn variant="outline" icon="download" onClick={() => window.print()}>Download Trip Pack</Btn><Link className="btn" href={`/trips/${trip.id}`}>Manage Trip</Link></div></div>
     <Card className="mb"><div className="grid g6"><Kv rows={[['Traveller', traveller.name], ['', traveller.department]]} /><Kv rows={[['Trip Purpose', trip.purpose]]} /><Kv rows={[['Cost Object', trip.cost_object]]} /><Kv rows={[['Approver', approvals[0]?.approver_name]]} /><Kv rows={[['Travel Dates', range(trip.dep_date, trip.ret_date)]]} /><Kv rows={[['Destination', trip.dest_city], ['Est. Trip Cost', inr(trip.est_budget)]]} /></div><div className="mt"><Steps steps={steps} /></div></Card>
+    <PlannedTravel plan={data.agentPlan} />
     <Tabs value={tab} onChange={(t) => nav.set({ tab: t }, true)} tabs={[{ key: 'itinerary', label: 'Itinerary' }, { key: 'services', label: 'Service Details' }, { key: 'documents', label: 'Documents' }, { key: 'cost', label: 'Cost & Invoices' }, { key: 'approvals', label: 'Approvals' }, { key: 'communication', label: 'Communication' }, { key: 'history', label: 'History' }]} />
     {tab === 'itinerary' && <div className="main-side">
       <Card title="Trip Itinerary Timeline" icon="clock">{sorted.length === 0 ? <Empty>No bookings yet.</Empty> : sorted.map((b) => { const [ic, lab] = cats[b.type] || cats.other; return (

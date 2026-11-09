@@ -2,6 +2,8 @@ import { route, created, setCookie, cookieOf, jsonResponse } from './router';
 import { SESSION_COOKIE, PRE_COOKIE, login, verifyMfa, forgotPassword, verifyResetOtp, resetPassword, register, travellerLookup, travellerVerify } from '../services/auth';
 import * as trips from '../services/trips';
 import * as svc from '../services/services';
+import * as flights from '../services/flights';
+import * as hotels from '../services/hotels';
 import * as bookings from '../services/bookings';
 import * as approvals from '../services/approvals';
 import * as expenses from '../services/expenses';
@@ -62,6 +64,23 @@ route('GET', '/trips/:id/services', ({ db, user, params }) => svc.listTripServic
 route('POST', '/trips/:id/services', ({ db, user, params, body }) => created(svc.saveService(db, user, num(params.id), body)));
 route('POST', '/trips/:id/book', ({ db, user, params, body }) => created(svc.bookPortal(db, user, num(params.id), body)));
 route('GET', '/search', ({ db, user, query }) => svc.searchWithPolicy(db, user, query));
+
+// Flight discovery never creates a booking or confirms a ticket.
+route('POST', '/flights/search', ({ db, user, body }) => flights.searchFlights(db, user, body));
+route('POST', '/flights/next', ({ db, user, body }) => flights.nextFlights(db, user, body));
+route('POST', '/flights/booking-options', ({ db, user, body }) => flights.bookingOptions(db, user, body));
+route('POST', '/flights/options', ({ db, user, body }) => created(flights.saveFlightOption(db, user, body)));
+route('GET', '/flights/history', ({ db, user, query }) => flights.flightHistory(db, user, query.trip_id));
+route('GET', '/flights/search/:id', ({ db, user, params }) => flights.resumeFlightSearch(db, user, params.id));
+
+// Hotel discovery, property details and provider referrals; no reservation is created.
+route('POST', '/hotels/search', ({ db, user, body }) => hotels.searchHotels(db, user, body));
+route('POST', '/hotels/page', ({ db, user, body }) => hotels.nextHotelPage(db, user, body));
+route('POST', '/hotels/details', ({ db, user, body }) => hotels.hotelDetails(db, user, body));
+route('POST', '/hotels/request', ({ db, user, body }) => created(hotels.requestHotel(db, user, body)));
+route('GET', '/hotels/history', ({ db, user, query }) => hotels.hotelHistory(db, user, query.trip_id));
+route('GET', '/hotels/search/:id', ({ db, user, params }) => hotels.resumeHotels(db, user, params.id));
+route('GET', '/hotels/redirect', ({ db, user, query }) => hotels.redirectHotel(db, user, query));
 
 // ---------- services / travel desk ----------
 route('GET', '/services/:id', ({ db, user, params }) => desk.serviceDetail(db, user, num(params.id)));
@@ -180,6 +199,18 @@ route('PATCH', '/policy/:id', { roles: ['admin'] }, ({ db, user, params, body })
 route('POST', '/policy/test', { roles: ['admin'] }, ({ db, body }) => policy.testPolicy(db, body));
 
 // ---------- assistant ----------
-route('GET', '/assistant', ({ db, user }) => ({ messages: assistant.history(db, user) }));
-route('POST', '/assistant', ({ db, user, body }) => ({ messages: assistant.chat(db, user, body.message) }));
+const assistantHandler = async ({ db, user, req, body }) => {
+  try {
+    const result = await assistant.employeeChat(db, user, cookieOf(req, SESSION_COOKIE), body);
+    return { ...result, messages: result.answer ? [{ role: 'assistant', text: result.answer, ...result }] : [] };
+  } catch (error) {
+    // Do not log raw employee messages, provider tokens or upstream exceptions.
+    const status = Number.isInteger(error?.status) ? error.status : 500;
+    return jsonResponse({ error: status === 500 ? 'The assistant is temporarily unavailable. Please retry.' : error.message }, status, status === 429 ? { 'retry-after': '60' } : {});
+  }
+};
+route('POST', '/employee-assistant/chat', { maxBodyBytes: 16384 }, assistantHandler);
+// Legacy API aliases use the same read-only implementation; no chat transaction path remains.
+route('GET', '/assistant', () => ({ messages: [] }));
+route('POST', '/assistant', { maxBodyBytes: 16384 }, assistantHandler);
 export const cookieHelpers = { cookieOf, PRE_COOKIE };

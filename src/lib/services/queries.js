@@ -11,6 +11,7 @@ import { refundKpis } from './finance';
 // ================= dashboards =================
 export function dashboard(db, user) {
   syncStatuses(db); syncAlerts(db, user);
+  const pendingFor = (type) => db.get("SELECT COUNT(*) c FROM approvals WHERE entity_type=? AND status='Pending' AND (approver_id=? OR (approver_id IS NULL AND approver_role=?))", type, user.id, user.role).c;
   const t = today();
   const base = { role: user.role, pending: pendingCount(db, user), unread: unreadCount(db, user) };
   if (user.role === 'employee') {
@@ -24,7 +25,7 @@ export function dashboard(db, user) {
     const docs = db.all("SELECT * FROM documents WHERE user_id=? AND expiry_date IS NOT NULL AND doc_type NOT IN ('PAN Card','Aadhaar Card')", user.id).map((d) => ({ ...d, days_left: daysBetween(t, d.expiry_date) }));
     const draftReports = db.get("SELECT COUNT(*) c FROM expense_reports WHERE user_id=? AND status IN ('Draft','Returned for Correction')", user.id).c;
     const needReport = db.get("SELECT COUNT(*) c FROM trips tr WHERE tr.traveller_id=? AND tr.status='Expenses Pending' AND NOT EXISTS (SELECT 1 FROM expense_reports e WHERE e.trip_id=tr.id)", user.id).c;
-    return { ...base, kpis: { upcoming: upcomingCount, waiting: replies.length, expiringSoon: docs.filter((d) => d.days_left >= 0 && d.days_left <= 7).length, expired: docs.filter((d) => d.days_left < 0).length, expensesPending: draftReports + needReport }, upcoming, replies,
+    return { ...base, kpis: { upcoming: upcomingCount, waiting: new Set(replies.map((r) => r.kind === 'trip' ? r.id : r.trip_id)).size, expiringSoon: docs.filter((d) => d.days_left >= 0 && d.days_left <= 7).length, expired: docs.filter((d) => d.days_left < 0).length, expensesPending: draftReports + needReport }, upcoming, replies,
       expiring: docs.filter((d) => d.days_left <= 7).sort((a, b) => a.days_left - b.days_left) };
   }
   if (user.role === 'manager') {
@@ -32,17 +33,17 @@ export function dashboard(db, user) {
     const q = `(${ids.map(() => '?').join(',')})`;
     const team = db.get(`SELECT COUNT(*) c FROM trips WHERE traveller_id IN ${q} AND status IN ('Approved','Booking In Progress','Travel In Progress') AND ret_date>=?`, ...ids, t).c;
     const pendingTrips = db.all(`SELECT a.id approval_id, tr.trip_no, tr.title, tr.dep_date, tr.est_budget, u.name employee FROM approvals a JOIN trips tr ON tr.id=a.entity_id JOIN users u ON u.id=tr.traveller_id WHERE a.entity_type='trip' AND a.status='Pending' AND a.approver_id=? ORDER BY a.id DESC LIMIT 6`, user.id);
-    const exceptions = db.get("SELECT COUNT(*) c FROM approvals WHERE entity_type='booking' AND status='Pending' AND approver_id=?", user.id).c;
+    const exceptions = pendingFor('booking');
     const rd = readiness(db, user, {});
     const refunds = db.get(`SELECT COUNT(*) c FROM refunds r JOIN bookings b ON b.id=r.booking_id WHERE b.traveller_id IN ${q} AND r.status NOT IN ('Credited','Rejected','Not Applicable')`, ...ids).c;
-    return { ...base, kpis: { pendingTrips: db.get("SELECT COUNT(*) c FROM approvals WHERE entity_type='trip' AND status='Pending' AND approver_id=?", user.id).c, pendingExpenses: db.get("SELECT COUNT(*) c FROM approvals WHERE entity_type='expense' AND status='Pending' AND approver_id=?", user.id).c, teamTrips: team, exceptions, highRisk: rd.kpis.high, refunds }, pendingTrips, upcoming: rd.rows.slice(0, 5) };
+    return { ...base, kpis: { pendingTrips: pendingFor('trip'), pendingExpenses: pendingFor('expense'), teamTrips: team, exceptions, highRisk: rd.kpis.high, refunds }, pendingTrips, upcoming: rd.rows.slice(0, 5) };
   }
   if (user.role === 'travel_desk') {
     const qd = listQueue(db, user, { size: 6 });
     return { ...base, kpis: qd.counts, queue: qd.rows, refunds: db.get("SELECT COUNT(*) c FROM refunds WHERE status NOT IN ('Credited','Rejected','Not Applicable')").c };
   }
   if (user.role === 'finance') {
-    return { ...base, kpis: { expenseApprovals: db.get("SELECT COUNT(*) c FROM approvals WHERE entity_type='expense' AND status='Pending' AND approver_role='finance'").c, payable: db.get("SELECT COUNT(*) c FROM reimbursements WHERE status='Payable'").c, failed: db.get("SELECT COUNT(*) c FROM reimbursements WHERE status IN ('Failed','Returned')").c,
+    return { ...base, kpis: { expenseApprovals: pendingFor('expense'), payable: db.get("SELECT COUNT(*) c FROM reimbursements WHERE status='Payable'").c, failed: db.get("SELECT COUNT(*) c FROM reimbursements WHERE status IN ('Failed','Returned')").c,
       exceptions: db.get("SELECT COUNT(*) c FROM bookings b LEFT JOIN invoices i ON i.booking_id=b.id WHERE b.status NOT IN ('Created','Held') AND b.amount>0 AND i.id IS NULL").c, refunds: db.get("SELECT COUNT(*) c FROM refunds WHERE status NOT IN ('Credited','Rejected','Not Applicable')").c },
     recent: db.all("SELECT r.id, r.report_no, r.title, u.name employee, rb.status payment_status, rb.payable_amount FROM expense_reports r JOIN users u ON u.id=r.user_id LEFT JOIN reimbursements rb ON rb.report_id=r.id WHERE r.status IN ('Manager Approved','Finance Approved','Posted') ORDER BY r.id DESC LIMIT 6") };
   }
@@ -166,7 +167,7 @@ export function teamBookingAnalytics(db, user, q = {}) {
   const byService = ['flight', 'hotel', 'bus', 'train', 'cab', 'other'].map((t) => ({ label: t[0].toUpperCase() + t.slice(1) + 's', value: inRange.filter((b) => b.type === t).length })).filter((x) => x.value);
   const canc = inRange.filter((b) => b.status === 'Cancelled');
   const refundStatus = ['Credited', 'Processing', 'Requested', 'Supplier Confirmed', 'Partially Credited', 'Rejected', 'Not Applicable'].map((s) => ({ label: s, value: canc.filter((b) => b.rstatus === s).length })).filter((x) => x.value);
-  const trend = []; for (let i = 2; i >= 0; i--) { const d = new Date(); d.setUTCMonth(d.getUTCMonth() - i); const m = d.toISOString().slice(0, 7); const rows = all.filter((b) => b.rstatus && String(b.cancelled_at || '').startsWith(m)); trend.push({ label: m, credited: round2(rows.reduce((s, b) => s + (b.actual_refund || 0), 0)), pending: round2(rows.reduce((s, b) => s + Math.max(0, b.expected_refund - b.actual_refund), 0)) }); }
+  const trend = []; for (let i = 2; i >= 0; i--) { const d = new Date(); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() - i); const m = d.toISOString().slice(0, 7); const rows = all.filter((b) => b.rstatus && String(b.cancelled_at || '').startsWith(m)); trend.push({ label: m, credited: round2(rows.reduce((s, b) => s + (b.actual_refund || 0), 0)), pending: round2(rows.reduce((s, b) => s + Math.max(0, b.expected_refund - b.actual_refund), 0)) }); }
   let list = inRange;
   const tab = q.tab || 'All'; if (tab === 'Cancelled') list = list.filter((b) => b.status === 'Cancelled'); else if (tab === 'Confirmed') list = list.filter((b) => b.status === 'Confirmed'); else if (tab === 'Pending') list = list.filter((b) => ['Created', 'Ticketing Pending'].includes(b.status));
   else if (tab === 'Refund Pending') list = list.filter((b) => b.rstatus && !['Credited', 'Rejected', 'Not Applicable'].includes(b.rstatus)); else if (tab === 'Refund Credited') list = list.filter((b) => b.rstatus === 'Credited'); else if (tab === 'Refund Rejected') list = list.filter((b) => b.rstatus === 'Rejected');

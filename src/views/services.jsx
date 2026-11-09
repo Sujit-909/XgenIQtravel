@@ -1,5 +1,7 @@
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
+import FlightPortal from '@/views/flight-portal';
+import HotelPortal from '@/views/hotel-portal';
 import { Card, Badge, Icon, DataTable, Btn, Modal, Field, Input, Select, Textarea, Check, useApi, Tabs, FileDrop, Kv, Empty } from '@/components/ui';
 import { fdate, inr, fdt } from '@/lib/format';
 import { AIRPORTS, AIRPORT_OF_CITY } from '@/lib/constants';
@@ -8,85 +10,6 @@ const OTHER = [['Travel Insurance', 'shield', 'Request travel insurance for your
 const TILES = [['flight', 'Flight Booking', 'plane'], ['hotel', 'Hotel Booking', 'bed'], ['ground', 'Ground Transport', 'car'], ['visa', 'Visa Processing', 'globe'], ['other', 'Other Services', 'file']];
 export const serviceTileDefs = TILES;
 
-function PolicyBadge({ p }) { return <Badge tone={p.status === 'Compliant' ? 'green' : p.status === 'Exception Required' ? 'orange' : 'red'}>{p.status === 'Compliant' ? 'Compliant' : p.status === 'Exception Required' ? 'Exception Required' : 'Out of Policy'}</Badge>; }
-const hhmm = (o) => `${o.depTime} → ${o.arrTime}${o.arrNextDay ? ' +1' : ''}`;
-
-// ---------- Flight (portal) ----------
-function FlightPortal({ trip }) {
-  const api = useApi();
-  const [q, setQ] = useState({ from: AIRPORT_OF_CITY[trip.dep_city] || 'BBI', to: AIRPORT_OF_CITY[trip.dest_city] || 'BOM', date: trip.dep_date, cabin: 'Economy' });
-  const [res, setRes] = useState(null); const [sel, setSel] = useState(null); const [comment, setComment] = useState(''); const [just, setJust] = useState(''); const [needJust, setNeedJust] = useState(false); const [busy, setBusy] = useState(false); const [done, setDone] = useState(null); const [stops, setStops] = useState([]); const [err, setErr] = useState('');
-  const search = async () => { setBusy(true); setDone(null); setNeedJust(false); const r = await api('GET', `/search?kind=flight&from=${q.from}&to=${q.to}&date=${q.date}&cabin=${encodeURIComponent(q.cabin)}&trip_id=${trip.id}`, undefined, { refresh: false }); setBusy(false); if (r.ok) { setRes(r.data.flights); setSel(r.data.flights.recommendedId); } };
-  const book = async () => {
-    setBusy(true); setErr(''); const r = await api('POST', `/trips/${trip.id}/book`, { type: 'flight', offer_id: sel, comment, justification: just }, { silent: true });
-    setBusy(false);
-    if (r.ok) { setDone(r.data); return; }
-    if (r.data?.requiresJustification) setNeedJust(true);
-    setErr(r.error);
-  };
-  const opts = res?.options.filter((o) => !stops.length || stops.includes(o.stops === 0 ? 'Non-stop' : '1+ Stops')) || [];
-  const chosen = res?.options.find((o) => o.id === sel);
-  return (
-    <div className="stack">
-      <div className="form-grid fg6" style={{ alignItems: 'end' }}>
-        <Field label="From" required><Select value={q.from} onChange={(e) => setQ({ ...q, from: e.target.value })} options={AIRPORTS} /></Field>
-        <Field label="To" required><Select value={q.to} onChange={(e) => setQ({ ...q, to: e.target.value })} options={AIRPORTS} /></Field>
-        <Field label="Departure Date" required><Input type="date" value={q.date} onChange={(e) => setQ({ ...q, date: e.target.value })} /></Field>
-        <Field label="Class"><Select value={q.cabin} onChange={(e) => setQ({ ...q, cabin: e.target.value })} options={['Economy', 'Premium Economy', 'Business']} /></Field>
-        <div style={{ gridColumn: 'span 2' }}><Btn icon="search" busy={busy} onClick={search}>Search Flights</Btn></div>
-      </div>
-      {res && (<div className="grid" style={{ gridTemplateColumns: '170px 1fr', alignItems: 'start' }}>
-        <div className="card"><div className="card-b"><b>Filters</b><div className="mt-sm small">Stops</div>{['Non-stop', '1+ Stops'].map((s) => <Check key={s} checked={stops.includes(s)} onChange={(e) => setStops(e.target.checked ? [...stops, s] : stops.filter((x) => x !== s))}>{s}</Check>)}</div></div>
-        <div className="card"><div className="card-h"><h3>Available Flights ({opts.length}) — {q.date}</h3></div>
-          <DataTable rows={opts} dense empty="No flights found." columns={[
-            { key: 'airline', label: 'Airline', render: (o) => <><b>{o.airline}</b> <span className="muted small">{o.flightNo}</span>{o.id === res.recommendedId && <div><Badge tone="green">Recommended</Badge></div>}</> },
-            { key: 't', label: 'Departure → Arrival', render: hhmm }, { key: 'd', label: 'Duration', render: (o) => <>{o.durationLabel}<div className="small muted">{o.stopsLabel}</div></> },
-            { key: 'fare', label: 'Fare (incl. taxes)', render: (o) => <b>{inr(o.fare)}</b> }, { key: 'b', label: 'Baggage', render: (o) => `${o.baggageKg} kg` }, { key: 'p', label: 'Policy', render: (o) => <PolicyBadge p={o.policy} /> },
-            { key: 's', label: 'Select', render: (o) => <input type="radio" name="fl" disabled={!o.bookable} checked={sel === o.id} onChange={() => { setSel(o.id); setNeedJust(false); }} aria-label={`Select ${o.airline} ${o.flightNo}`} /> },
-          ]} />
-        </div></div>)}
-      {chosen && !done && (<div className="card"><div className="card-b stack">
-        <b>Policy check — {chosen.airline} {chosen.flightNo}, {inr(chosen.fare)}</b>
-        <div className="stack" style={{ gap: 4 }}>{chosen.policy.checks.filter((c) => c.severity !== 'info' || true).map((c) => <div key={c.label} className="row small"><Icon name={c.ok ? 'checkCircle' : 'alert'} size={15} style={{ color: c.ok ? 'var(--green)' : c.severity === 'info' ? 'var(--muted)' : 'var(--red)' }} /><b>{c.label}:</b> {c.detail}</div>)}</div>
-        {(needJust || chosen.policy.status !== 'Compliant') && <Field label="Justification for policy exception" required hint="Required for out-of-policy or over-budget options. Your manager will be asked to approve."><Textarea value={just} onChange={(e) => setJust(e.target.value)} /></Field>}
-        <Field label="Comment" required><Textarea value={comment} onChange={(e) => setComment(e.target.value)} maxLength={1000} placeholder="Add a note for this booking" /></Field>
-        {err && <div className="err" role="alert">{err}</div>}
-        <div><Btn busy={busy} disabled={!comment.trim()} onClick={book}>{chosen.policy.status === 'Compliant' ? 'Book Now' : 'Submit for Exception Approval'}</Btn></div>
-      </div></div>)}
-      {done && <div className={done.exception ? 'warn' : 'ok'}><b>{done.exception ? 'Submitted for approval' : 'Flight booked'}</b> — {done.booking.booking_no} ({done.booking.supplier_ref}).{done.exception ? ' Your approver has been notified.' : ' Ticket confirmed.'}</div>}
-    </div>
-  );
-}
-
-function HotelPortal({ trip }) {
-  const api = useApi();
-  const [q, setQ] = useState({ city: trip.dest_city, check_in: trip.dep_date, check_out: trip.ret_date > trip.dep_date ? trip.ret_date : '', rooms: 1, guests: 1, max_price: '', category: 'All', breakfast: false, free_cancel: false });
-  const [list, setList] = useState(null); const [pick, setPick] = useState(null); const [comment, setComment] = useState(''); const [just, setJust] = useState(''); const [busy, setBusy] = useState(false); const [done, setDone] = useState(null); const [err, setErr] = useState('');
-  const search = async () => { setBusy(true); setDone(null); const qs = new URLSearchParams({ kind: 'hotel', trip_id: trip.id, city: q.city, check_in: q.check_in, check_out: q.check_out, rooms: q.rooms, guests: q.guests, category: q.category, breakfast: q.breakfast, free_cancel: q.free_cancel, ...(q.max_price ? { max_price: q.max_price } : {}) }); const r = await api('GET', `/search?${qs}`, undefined, { refresh: false }); setBusy(false); if (r.ok) setList(r.data.hotels || []); };
-  const book = async () => { setBusy(true); setErr(''); const r = await api('POST', `/trips/${trip.id}/book`, { type: 'hotel', offer_id: pick.id, rooms: q.rooms, guests: q.guests, comment, justification: just }, { silent: true }); setBusy(false); if (r.ok) { setDone(r.data); setPick(null); } else setErr(r.error); };
-  return (
-    <div className="stack">
-      <div className="form-grid fg6" style={{ alignItems: 'end' }}>
-        <Field label="Destination City" required><Input value={q.city} onChange={(e) => setQ({ ...q, city: e.target.value })} /></Field>
-        <Field label="Check-in" required><Input type="date" value={q.check_in} onChange={(e) => setQ({ ...q, check_in: e.target.value })} /></Field>
-        <Field label="Check-out" required><Input type="date" value={q.check_out} onChange={(e) => setQ({ ...q, check_out: e.target.value })} /></Field>
-        <Field label="Rooms"><Input type="number" min="1" value={q.rooms} onChange={(e) => setQ({ ...q, rooms: e.target.value })} /></Field>
-        <Field label="Max price / night"><Input type="number" value={q.max_price} onChange={(e) => setQ({ ...q, max_price: e.target.value })} placeholder="Any" /></Field>
-        <Field label="Category"><Select value={q.category} onChange={(e) => setQ({ ...q, category: e.target.value })} options={['All', '3 Star', '4 Star', '5 Star']} /></Field>
-      </div>
-      <div className="row"><Check checked={q.breakfast} onChange={(e) => setQ({ ...q, breakfast: e.target.checked })}>Breakfast included</Check><Check checked={q.free_cancel} onChange={(e) => setQ({ ...q, free_cancel: e.target.checked })}>Free cancellation</Check><Btn icon="search" busy={busy} onClick={search}>Search Hotels</Btn></div>
-      {list && <Card title={`Available Hotels (${list.length})`} body={false}><DataTable rows={list} dense empty="No hotels match your filters." columns={[
-        { key: 'name', label: 'Hotel', render: (h) => <><b>{h.name}</b><div className="small muted">{'★'.repeat(h.star)} · {h.rating} ({h.reviews} reviews)</div></> }, { key: 'area', label: 'Location' }, { key: 'p', label: 'Price / Night', render: (h) => <b>{inr(h.pricePerNight)}</b> }, { key: 't', label: `Total (${list[0]?.nights || 1} night)`, render: (h) => inr(h.total) },
-        { key: 'am', label: 'Amenities', render: (h) => h.amenities.join(', ') + (h.freeCancelDays ? ' · Free cancellation' : '') }, { key: 'pol', label: 'Policy', render: (h) => <PolicyBadge p={h.policy} /> }, { key: 's', label: 'Select', render: (h) => <Btn variant="outline" className="sm" onClick={() => setPick(h)}>Select</Btn> },
-      ]} /></Card>}
-      {done && <div className={done.exception ? 'warn' : 'ok'}><b>{done.exception ? 'Submitted for approval' : 'Hotel booked'}</b> — {done.booking.booking_no}, confirmation {done.booking.supplier_ref}.</div>}
-      {pick && <Modal title={`Book ${pick.name}`} size="sm" onClose={() => setPick(null)} footer={<><Btn variant="outline" onClick={() => setPick(null)}>Cancel</Btn><Btn busy={busy} disabled={!comment.trim() || (pick.policy.status !== 'Compliant' && just.trim().length < 10)} onClick={book}>{pick.policy.status === 'Compliant' ? 'Confirm Booking' : 'Submit for Approval'}</Btn></>}>
-        <Kv rows={[['Hotel', pick.name], ['Dates', `${fdate(pick.checkIn)} - ${fdate(pick.checkOut)} (${pick.nights} nights)`], ['Total', inr(pick.pricePerNight * pick.nights * Number(q.rooms || 1))]]} />
-        <div className="stack mt">{pick.policy.checks.map((c) => <div key={c.label} className="row small"><Icon name={c.ok ? 'checkCircle' : 'alert'} size={15} style={{ color: c.ok ? 'var(--green)' : 'var(--red)' }} />{c.detail}</div>)}
-          {pick.policy.status !== 'Compliant' && <Field label="Justification" required><Textarea value={just} onChange={(e) => setJust(e.target.value)} /></Field>}<Field label="Comment" required><Textarea value={comment} onChange={(e) => setComment(e.target.value)} /></Field>{err && <div className="err">{err}</div>}</div></Modal>}
-    </div>
-  );
-}
 
 function GroundPortal({ trip }) {
   const api = useApi();
@@ -182,7 +105,7 @@ export function ServicePanel({ trip, services, type, user }) {
     <Card title={{ flight: 'Flight Booking', hotel: 'Hotel Booking', ground: 'Ground Transport / Taxi', visa: 'Visa Processing', other: 'Other Travel Services' }[type]} icon={{ flight: 'plane', hotel: 'bed', ground: 'car', visa: 'globe', other: 'file' }[type]}>
       {tabs.length > 0 && <Tabs tabs={tabs} value={tab} onChange={(t) => { setTab(t); setMsg(''); }} />}
       {msg && <div className="ok mb">{msg}</div>}
-      {tab === 'portal' && type === 'flight' && <FlightPortal trip={trip} />}{tab === 'portal' && type === 'hotel' && <HotelPortal trip={trip} />}{tab === 'portal' && type === 'ground' && <GroundPortal trip={trip} />}
+      {tab === 'portal' && type === 'flight' && <FlightPortal key={trip.id} trip={trip} />}{tab === 'portal' && type === 'hotel' && <HotelPortal key={trip.id} trip={trip} />}{tab === 'portal' && type === 'ground' && <GroundPortal trip={trip} />}
       {tab === 'agency' && <AgencyForm key={`${type}-${draft?.id || 'new'}`} trip={trip} type={type} draftId={draft?.id} onDone={(s, d) => setMsg(d ? `Draft saved (${s.srv_no}).` : `Request ${s.srv_no} submitted. The travel desk will respond with options.`)} />}
       {tab === 'status' && <ServiceList services={services.filter((s) => s.type === type)} user={user} />}
     </Card>

@@ -289,4 +289,45 @@ CREATE TABLE IF NOT EXISTS assistant_messages (
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   role TEXT NOT NULL, content TEXT NOT NULL, created_at TEXT NOT NULL
 );
+
+-- Search tokens remain server-side. Saved options are not booking records.
+CREATE TABLE IF NOT EXISTS flight_searches (
+  id TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id), trip_id INTEGER NOT NULL REFERENCES trips(id),
+  fingerprint TEXT NOT NULL, criteria TEXT NOT NULL, payload TEXT NOT NULL, created_at TEXT NOT NULL, expires_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_flight_search_cache ON flight_searches(fingerprint,created_at);
+CREATE INDEX IF NOT EXISTS idx_flight_search_history ON flight_searches(user_id,trip_id,created_at);
+CREATE TABLE IF NOT EXISTS flight_options (
+  id TEXT PRIMARY KEY, trip_id INTEGER NOT NULL REFERENCES trips(id), user_id INTEGER NOT NULL REFERENCES users(id),
+  fingerprint TEXT NOT NULL, snapshot TEXT NOT NULL, created_at TEXT NOT NULL, UNIQUE(trip_id,user_id,fingerprint)
+);
+CREATE TABLE IF NOT EXISTS flight_rate_limits (
+  bucket TEXT NOT NULL, window INTEGER NOT NULL, count INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(bucket,window)
+);
+
+CREATE TABLE IF NOT EXISTS hotel_searches (
+  id TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id), trip_id INTEGER NOT NULL REFERENCES trips(id),
+  fingerprint TEXT NOT NULL, criteria TEXT NOT NULL, payload TEXT NOT NULL, created_at TEXT NOT NULL, expires_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_hotel_search_cache ON hotel_searches(fingerprint,created_at);
+CREATE INDEX IF NOT EXISTS idx_hotel_search_history ON hotel_searches(user_id,trip_id,created_at);
+
+  CREATE TABLE IF NOT EXISTS assistant_travel_plans (
+    id TEXT PRIMARY KEY, conversation_id TEXT NOT NULL UNIQUE, user_id INTEGER NOT NULL REFERENCES users(id),
+    session_hash TEXT NOT NULL, version INTEGER NOT NULL DEFAULT 1, review_version INTEGER,
+    payload TEXT NOT NULL DEFAULT '{}', trip_id INTEGER REFERENCES trips(id),
+    created_at TEXT NOT NULL, updated_at TEXT NOT NULL, expires_at TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_assistant_travel_owner ON assistant_travel_plans(user_id,session_hash);
+  -- Employee assistant stores no message history; travel plans retain structured selections only.
+CREATE TABLE IF NOT EXISTS employee_assistant_conversations (
+  id TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id), session_hash TEXT NOT NULL,
+  encrypted_token TEXT, topic TEXT, turns INTEGER NOT NULL DEFAULT 0, expires_at TEXT NOT NULL,
+  lease_until INTEGER NOT NULL DEFAULT 0, last_request_id TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_employee_assistant_scope ON employee_assistant_conversations(user_id,session_hash);
+CREATE TABLE IF NOT EXISTS employee_assistant_limits (
+  bucket TEXT NOT NULL, window INTEGER NOT NULL, count INTEGER NOT NULL DEFAULT 0,
+  expires_at INTEGER NOT NULL, PRIMARY KEY(bucket,window)
+);
 `;

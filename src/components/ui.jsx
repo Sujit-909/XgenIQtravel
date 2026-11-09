@@ -62,6 +62,14 @@ export function Stat({ icon, tone = 'blue', value, label, sub, delta, href, more
   );
   return href ? <Link href={href} style={{ textDecoration: 'none' }}>{inner}</Link> : inner;
 }
+// One native link per dashboard summary; no additional data requests.
+export function SummaryCard({ icon = 'list', tone = 'blue', value, label, sub, href, more = 'View records', iconColor, filters }) {
+  const destination = filters ? href + '?' + new URLSearchParams(filters) : href;
+  return <Link href={destination} prefetch={false} className={'stat summary-card ' + tone}>
+    <span className="top"><span className="ico" style={{ color: iconColor || 'var(--blue)' }}><Icon name={icon} size={18} /></span><span className="summary-content"><span className="num">{value}</span><span className="lbl">{label}</span>{sub && <span className="sub">{sub}</span>}</span><Icon name="chevRight" size={16} /></span>
+    <span className="more">{more}</span>
+  </Link>;
+}
 export const Empty = ({ children = 'Nothing to show here yet.' }) => <div className="center muted" style={{ padding: 28 }}>{children}</div>;
 export const Notice = ({ kind = 'note', children }) => <div className={kind}>{children}</div>;
 
@@ -194,6 +202,8 @@ export function Pager({ page, size, total, noun = 'entries' }) {
 // Filter bar bound to URL search params
 export function Filters({ fields, onApplyLabel = 'Apply' }) {
   const nav = useNav(); const [v, setV] = useState(() => Object.fromEntries(fields.map((f) => [f.key, nav.get(f.key, '')])));
+  const filterKey = JSON.stringify(fields.map((f) => [f.key, nav.get(f.key, '')]));
+  useEffect(() => { setV(Object.fromEntries(JSON.parse(filterKey))); }, [filterKey]);
   return (
     <div className="row wrap" style={{ alignItems: 'flex-end', marginBottom: 12 }}>
       {fields.map((f) => (

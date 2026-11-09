@@ -103,11 +103,12 @@ test('expense report: create, add item with allocation, upload receipt, review a
   assert.deepEqual(errors, []);
 });
 
-test('travel assistant creates a trip only after confirmation', opts, async () => {
+test('employee assistant keeps business actions in authorized workflows', opts, async () => {
   const page = await newPage(); await signIn(page, EMAILS.emp); await page.goto(`${S.url}/assistant`);
-  await page.getByLabel('Message').fill('I need to travel to Mumbai next week for a client meeting'); await page.getByRole('button', { name: 'Send' }).click();
-  await page.getByText('Estimated Cost').waitFor();
-  await page.getByRole('button', { name: 'Yes, create the trip request' }).click(); await page.getByText(/Trip ID: BT-/).waitFor();
+  await page.getByLabel('Message', { exact: true }).fill('Create a trip request for Mumbai');
+  await page.getByRole('button', { name: 'Send', exact: true }).click();
+  await page.getByText('Authorized workflow required', { exact: true }).waitFor();
+  assert.equal(await page.getByRole('button', { name: 'Yes, create the trip request' }).count(), 0);
   assert.deepEqual(errors, []);
 });
 

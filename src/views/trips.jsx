@@ -2,13 +2,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Card, PageHead, Stat, Badge, Icon, DataTable, Pager, Filters, Btn, Modal, Field, Input, Select, Textarea, Check, useApi, useNav, Confirm, Menu, FileDrop, Steps, Kv, Tabs } from '@/components/ui';
+import { Card, PageHead, Stat, Badge, Icon, DataTable, Pager, Btn, Modal, Field, Input, Select, Textarea, Check, useApi, useNav, Confirm, Menu, FileDrop, Steps, Kv, Tabs } from '@/components/ui';
+import TripFilters from '@/components/TripFilters';
 import { Donut, Legend } from '@/components/charts';
 import { fdate, inr, range, nightsOf, fdt } from '@/lib/format';
-import { PURPOSES, TRAVEL_MODES, TRIP_STATUSES } from '@/lib/constants';
+import { PURPOSES, TRAVEL_MODES } from '@/lib/constants';
 import { OtpBoxes } from '@/views/auth';
 
-const STATUS_ICON = { Draft: 'file', Submitted: 'send', 'Pending for Review': 'clock', 'Under Approval': 'hourglass', Approved: 'checkCircle', 'Booking In Progress': 'settings', 'Travel In Progress': 'plane', 'Expenses Pending': 'receipt', Closed: 'check', Rejected: 'x', Cancelled: 'x' };
 
 // ---------- Create-new-trip modal (Self / Agency / Colleague + traveller verification) ----------
 export function CreateTripModal({ user, onClose }) {
@@ -44,16 +44,15 @@ export function TripsView({ user, data }) {
   const k = data.kpis; const colors = ['#9aa4b8', '#1d5fe0', '#f5a623', '#ef6c3c', '#16a34a', '#3b82f6', '#8b5cf6', '#ec4899', '#64748b', '#dc2626', '#0f172a'];
   const donut = data.byStatus.map((s, i) => ({ label: s.status, value: s.count, color: colors[i] }));
   const exportCsv = () => { const head = ['Trip ID', 'Title', 'Employee', 'Department', 'Destination', 'Type', 'Departure', 'Return', 'Estimate', 'Status']; const rows = data.rows.map((t) => [t.trip_no, t.title, t.traveller_name, t.department, t.dest_city, t.travel_type, t.dep_date, t.ret_date, t.est_budget, t.status]); const csv = [head, ...rows].map((r) => r.map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n'); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = 'trips.csv'; a.click(); };
-  return (<>
+  return (<><div className="trips-page">
     <PageHead title={user.role === 'employee' ? 'My Trips' : 'Manage Business Trips'} sub="Monitor travel requests, approvals and trip status" actions={<><Btn icon="plus" onClick={() => setCreate(true)}>Create New Request</Btn><Btn variant="outline" icon="copy" disabled={sel.length !== 1} onClick={async () => { const r = await api('POST', `/trips/${sel[0]}/copy`, {}, { refresh: false }); if (r.ok) router.push(`/trips/${r.data.id}`); }}>Copy & Create</Btn></>} />
     <div className="grid g4 mb"><Stat icon="briefcase" value={k.total} label="Total Trips" delta={k.totalDelta} /><Stat icon="clock" tone="orange" value={k.pending} label="Pending Approval" delta={k.pendingDelta} iconColor="#d97706" /><Stat icon="plane" tone="purple" value={k.booking} label="Booking In Progress" delta={k.bookingDelta} iconColor="#6d3fd1" /><Stat icon="checkCircle" tone="green" value={k.completed} label="Completed Trips" delta={k.completedDelta} iconColor="#15803d" /></div>
-    <div className="row wrap mb" style={{ gap: 8 }}>{data.byStatus.map((s) => <button key={s.status} className="pill" onClick={() => nav.set({ status: s.status })} aria-label={`${s.status}: ${s.count}`}><Icon name={STATUS_ICON[s.status]} size={13} />{s.status} <span className="c">{s.count}</span></button>)}</div>
+    <TripFilters data={data} />
     <div className="grid g2 mb">
       <Card title="Trip Status Distribution" icon="chart"><div className="row" style={{ gap: 24 }}><Donut data={donut} label="Total Trips" /><div className="grow"><Legend data={donut} total={data.counts && Object.values(data.counts).reduce((a, b) => a + b, 0)} /></div></div></Card>
       <Card title="Trip Count by Status" icon="list" body={false}><DataTable rows={data.byStatus} rowKey="status" dense columns={[{ key: 'status', label: 'Status', render: (s) => <Badge>{s.status}</Badge> }, { key: 'count', label: 'Trip Count' }, { key: 'thisMonth', label: 'This Month' }, { key: 'avgApproval', label: 'Avg. Approval Time' }, { key: 'v', label: 'Action', render: (s) => <a href="#" onClick={(e) => { e.preventDefault(); nav.set({ status: s.status }); }}>View</a> }]} /></Card>
     </div>
     <Card title="Recent Business Trips" icon="briefcase" actions={<Btn variant="outline" icon="download" onClick={exportCsv}>Export</Btn>} body={false}>
-      <div style={{ padding: '12px 16px 0' }}><Filters fields={[{ key: 'q', label: 'Search', placeholder: 'Trip ID, title, destination, employee' }, { key: 'status', label: 'Status', type: 'select', options: TRIP_STATUSES.map((s) => [s, s]), all: 'All Statuses' }, { key: 'purpose', label: 'Request Purpose', type: 'select', options: PURPOSES.map((s) => [s, s]), all: 'All Purposes' }, { key: 'travel_type', label: 'Travel Type', type: 'select', options: [['Domestic', 'Domestic'], ['International', 'International']], all: 'All Types' }, { key: 'from', label: 'Departure from', type: 'date' }, { key: 'to', label: 'Departure to', type: 'date' }, ...(user.role !== 'employee' ? [{ key: 'department', label: 'Department', type: 'select', options: data.departments.map((d) => [d, d]), all: 'All Departments' }] : [])]} onApplyLabel="Search" /></div>
       <DataTable rows={data.rows} selectable selected={sel} onSelect={setSel} empty="No trips match your filters." columns={[
         { key: 'trip_no', label: 'Request ID', render: (t) => <Link href={`/trips/${t.id}`} className="bold">{t.trip_no}</Link> }, { key: 'title', label: 'Trip Title' }, { key: 'traveller_name', label: 'Employee Name' }, { key: 'department', label: 'Department' }, { key: 'dest_city', label: 'Destination', render: (t) => `${t.dest_city}, ${t.dest_country}` },
         { key: 'travel_type', label: 'Travel Type' }, { key: 'dep_date', label: 'Departure Date', render: (t) => fdate(t.dep_date) }, { key: 'ret_date', label: 'Return Date', render: (t) => fdate(t.ret_date) }, { key: 'est_budget', label: 'Estimated Cost', render: (t) => inr(t.est_budget) }, { key: 'status', label: 'Status', render: (t) => <Badge>{t.status}</Badge> },
@@ -62,6 +61,7 @@ export function TripsView({ user, data }) {
       ]} />
       <Pager page={data.page} size={data.size} total={data.total} noun="trips" />
     </Card>
+    </div>
     {create && <CreateTripModal user={user} onClose={() => setCreate(false)} />}
     {cancel && <Confirm title="Cancel Trip" danger needReason reasonLabel="Reason for cancellation" confirmLabel="Cancel Trip" text={`Cancel ${cancel.trip_no}? Active bookings will be cancelled and refund cases opened.`} onClose={() => setCancel(null)} onConfirm={async (reason) => { const r = await api('POST', `/trips/${cancel.id}/cancel`, { reason }, { success: 'Trip cancelled' }); if (r.ok) setCancel(null); }} />}
   </>);

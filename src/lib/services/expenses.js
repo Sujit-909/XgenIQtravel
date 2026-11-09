@@ -36,6 +36,7 @@ export function listReports(db, user, q = {}) {
   else if (scope === 'team') { const ids = teamIds(db, user.id); w.push(`r.user_id IN (${ids.map(() => '?').join(',')})`); p.push(...ids); }
   else if (!['finance', 'admin'].includes(user.role)) { w.push('r.user_id=?'); p.push(user.id); }
   const base = [...w]; const baseP = [...p];
+  if (q.view === 'to-submit') { w.push("r.user_id=? AND r.status IN ('Draft','Returned for Correction')"); p.push(user.id); }
   if (q.status && q.status !== 'All') {
     if (q.status === 'Paid') w.push("rb.status='Paid'");
     else if (DISPLAY[q.status]) { w.push(`r.status IN (${DISPLAY[q.status].map(() => '?').join(',')})`); p.push(...DISPLAY[q.status]); } else { w.push('r.status=?'); p.push(q.status); }
@@ -55,12 +56,13 @@ export function listReports(db, user, q = {}) {
      ${from} ${where} ORDER BY r.id DESC LIMIT ? OFFSET ?`, ...p, size, offset);
   const bw = base.length ? `WHERE ${base.join(' AND ')}` : '';
   const all = db.all(`SELECT r.status, r.created_at, rb.status rs ${from} ${bw}`, ...baseP);
-  const month = today().slice(0, 7); const pm = new Date(); pm.setUTCMonth(pm.getUTCMonth() - 1); const prev = pm.toISOString().slice(0, 7);
+  const month = today().slice(0, 7); const pm = new Date(); pm.setUTCDate(1); pm.setUTCMonth(pm.getUTCMonth() - 1); const prev = pm.toISOString().slice(0, 7);
   const cnt = (f, m) => all.filter((x) => f(x) && String(x.created_at).startsWith(m)).length;
   const defs = { Draft: (x) => x.status === 'Draft', Submitted: (x) => x.status === 'Submitted', 'In Review': (x) => x.status === 'Manager Approved', Approved: (x) => ['Finance Approved', 'Posted'].includes(x.status), Rejected: (x) => x.status === 'Rejected', Paid: (x) => x.rs === 'Paid', Returned: (x) => x.status === 'Returned for Correction' };
   const kpis = Object.fromEntries(Object.entries(defs).map(([k, f]) => { const c = all.filter(f).length; const a = cnt(f, month); const b = cnt(f, prev); return [k, { count: c, delta: b === 0 ? (a > 0 ? 100 : 0) : Math.round(((a - b) / b) * 100) }]; }));
   const departments = db.all('SELECT DISTINCT u.department d FROM users u ORDER BY 1').map((r) => r.d).filter(Boolean);
-  return { rows, total, page, size, kpis, scope, departments };
+  const pendingTrips = q.view === 'to-submit' ? db.all("SELECT tr.* FROM trips tr WHERE tr.traveller_id=? AND tr.status='Expenses Pending' AND NOT EXISTS (SELECT 1 FROM expense_reports e WHERE e.trip_id=tr.id) ORDER BY tr.dep_date DESC", user.id) : [];
+  return { rows, total, page, size, kpis, scope, departments, pendingTrips };
 }
 
 // ---------- create / read / update ----------

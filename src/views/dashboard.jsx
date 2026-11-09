@@ -1,7 +1,7 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Card, PageHead, Stat, Badge, Icon, DataTable, Btn, Avatar, useApi } from '@/components/ui';
+import { Card, PageHead, SummaryCard as Stat, Badge, Icon, DataTable, Btn, Avatar, useApi } from '@/components/ui';
 import { fdate, range, inr, nightsOf } from '@/lib/format';
 
 const QUICK = [['Plan a Trip', 'plane', '/trips/new', 'blue'], ['Book Flights', 'plane', '/services/flight', 'purple'], ['Book Hotels', 'bed', '/services/hotel', 'red'], ['Book Cabs', 'car', '/services/ground', 'orange'], ['Raise Expense', 'file', '/expenses/new', 'green'], ['Check Policy', 'shield', '/policy', 'purple']];
@@ -14,11 +14,11 @@ function EmployeeDash({ user, data }) {
   return (<>
     <PageHead title={`${greeting}, ${user.name.split(' ')[0]}!`} sub="Here's your travel overview and key actions for a smooth travel experience." actions={<Link href="/trips/new" className="btn"><Icon name="plus" size={16} />New Trip Request</Link>} />
     <div className="grid g5 mb">
-      <Stat icon="plane" tone="blue" value={k.upcoming} label="Upcoming Trips" more="View Trips" href="/trips" />
-      <Stat icon="hourglass" tone="orange" value={k.waiting} label="Waiting for Your Reply" more="Take Action" iconColor="#d97706" href="#waiting" />
-      <Stat icon="alert" tone="red" value={k.expiringSoon} label="Expiring Soon" sub="(Next 7 Days)" more="View Details" iconColor="#d11a2a" href="/documents" />
-      <Stat icon="calendar" tone="purple" value={k.expired} label="Expired" more="View Details" iconColor="#6d3fd1" href="/documents" />
-      <Stat icon="file" tone="green" value={k.expensesPending} label="Expense Reports" sub="Pending to Submit" more="Raise Expense" iconColor="#15803d" href="/expenses" />
+      <Stat icon="plane" tone="blue" value={k.upcoming} label="Upcoming Trips" more="View Trips" href="/trips?view=upcoming" />
+      <Stat icon="hourglass" tone="orange" value={k.waiting} label="Waiting for Your Reply" more="Take Action" iconColor="#d97706" href="/trips?view=waiting" />
+      <Stat icon="alert" tone="red" value={k.expiringSoon} label="Expiring Soon" sub="(Next 7 Days)" more="View Details" iconColor="#d11a2a" href="/documents?filter=soon&within=7" />
+      <Stat icon="calendar" tone="purple" value={k.expired} label="Expired" more="View Details" iconColor="#6d3fd1" href="/documents?filter=expired" />
+      <Stat icon="file" tone="green" value={k.expensesPending} label="Expense Reports" sub="Pending to Submit" more="Raise Expense" iconColor="#15803d" href="/expenses?view=to-submit&scope=mine" />
     </div>
     <div className="main-side mb" style={{ '--side-width': '380px' }}>
       <Card title="Upcoming Trips" icon="plane" actions={<Link href="/trips">View All Trips →</Link>} body={false}>
@@ -54,9 +54,9 @@ function ManagerDash({ data }) {
   return (<>
     <PageHead title="Manager Dashboard" sub="Team travel overview, approvals and risks" />
     <div className="grid g6 mb">
-      <Stat icon="checkCircle" tone="orange" value={k.pendingTrips} label="Trip Approvals" more="Review" href="/approvals" /><Stat icon="file" tone="orange" value={k.pendingExpenses} label="Expense Approvals" more="Review" href="/approvals?type=expense" />
-      <Stat icon="plane" tone="blue" value={k.teamTrips} label="Team Trips Upcoming" href="/trips" /><Stat icon="shield" tone="purple" value={k.exceptions} label="Policy Exceptions" href="/approvals?type=booking" />
-      <Stat icon="alert" tone="red" value={k.highRisk} label="High-Risk Trips" more="Readiness" href="/readiness" /><Stat icon="refresh" tone="green" value={k.refunds} label="Refunds Pending" href="/refunds" />
+      <Stat icon="checkCircle" tone="orange" value={k.pendingTrips} label="Trip Approvals" more="Review" href="/approvals?type=trip&status=Pending" /><Stat icon="file" tone="orange" value={k.pendingExpenses} label="Expense Approvals" more="Review" href="/approvals?type=expense&status=Pending" />
+      <Stat icon="plane" tone="blue" value={k.teamTrips} label="Team Trips Upcoming" href="/trips?scope=team&view=upcoming" /><Stat icon="shield" tone="purple" value={k.exceptions} label="Policy Exceptions" href="/approvals?type=booking&status=Pending" />
+      <Stat icon="alert" tone="red" value={k.highRisk} label="High-Risk Trips" more="Readiness" href="/readiness?risk=High" /><Stat icon="refresh" tone="green" value={k.refunds} label="Refunds Pending" href="/refunds?status=Unresolved" />
     </div>
     <div className="grid g2">
       <Card title="Awaiting Your Approval" icon="checkCircle" body={false}><DataTable rows={data.pendingTrips} rowKey="approval_id" empty="Nothing waiting." columns={[{ key: 'trip_no', label: 'Trip' }, { key: 'employee', label: 'Employee' }, { key: 'title', label: 'Title' }, { key: 'dep_date', label: 'Departure', render: (r) => fdate(r.dep_date) }, { key: 'est_budget', label: 'Estimate', render: (r) => inr(r.est_budget) }]} /></Card>
@@ -70,14 +70,14 @@ function DeskDash({ data }) {
     <PageHead title="Travel Desk Dashboard" sub="Agency requests and service operations" actions={<Link href="/travel-desk" className="btn">Open Operations Queue</Link>} />
     <div className="grid g6 mb">{[['Awaiting Agency Quote', 'orange'], ['Traveller Info', 'blue'], ['Approval Pending', 'purple'], ['Booking in Progress', 'green'], ['Ticketing Pending', 'blue'], ['Failed / Issues', 'red']].map(([s, t]) => <Stat key={s} tone={t} value={k[s] ?? 0} label={s} href={`/travel-desk?tab=${encodeURIComponent(s)}`} />)}</div>
     <div className="grid g2"><Card title="Latest Requests" icon="list" body={false}><DataTable rows={data.queue} empty="Queue is empty." columns={[{ key: 'srv_no', label: 'Req ID' }, { key: 'employee', label: 'Employee' }, { key: 'type', label: 'Service' }, { key: 'desk_stage', label: 'Stage', render: (r) => <Badge>{r.desk_stage}</Badge> }, { key: 's', label: 'SLA', render: (r) => <Badge>{r.sla.status}</Badge> }]} /></Card>
-      <Card title="Open Refund Cases" icon="refresh"><div className="stat blue"><div className="num">{data.refunds}</div><Link href="/refunds">Open Refund Centre →</Link></div></Card></div>
+      <Card title="Open Refund Cases" icon="refresh"><Stat icon="refresh" value={data.refunds} label="Open Refund Cases" href="/refunds?status=Unresolved" /></Card></div>
   </>);
 }
 function FinanceDash({ data }) {
   const k = data.kpis;
   return (<>
     <PageHead title="Finance Dashboard" sub="Approvals, reimbursements and reconciliation" />
-    <div className="grid g5 mb"><Stat icon="checkCircle" tone="orange" value={k.expenseApprovals} label="Expense Approvals" href="/approvals?type=expense" /><Stat icon="rupee" tone="blue" value={k.payable} label="Ready to Pay" href="/finance/reimbursements" /><Stat icon="alert" tone="red" value={k.failed} label="Failed Payments" href="/finance/reimbursements" /><Stat icon="file" tone="purple" value={k.exceptions} label="Missing Invoices" href="/finance/reconciliation?tab=exceptions" /><Stat icon="refresh" tone="green" value={k.refunds} label="Refunds Pending" href="/refunds" /></div>
+    <div className="grid g5 mb"><Stat icon="checkCircle" tone="orange" value={k.expenseApprovals} label="Expense Approvals" href="/approvals?type=expense&status=Pending" /><Stat icon="rupee" tone="blue" value={k.payable} label="Ready to Pay" href="/finance/reimbursements?payment_status=Payable" /><Stat icon="alert" tone="red" value={k.failed} label="Failed Payments" href="/finance/reimbursements?payment_status=Failed%20%2F%20Returned" /><Stat icon="file" tone="purple" value={k.exceptions} label="Missing Invoices" href="/finance/reconciliation?match=Missing%20Invoice" /><Stat icon="refresh" tone="green" value={k.refunds} label="Refunds Pending" href="/refunds?status=Unresolved" /></div>
     <Card title="Recent Expense Reports" icon="file" body={false}><DataTable rows={data.recent} empty="No reports." columns={[{ key: 'report_no', label: 'Report', render: (r) => <Link href={`/expenses/${r.id}`}>{r.report_no}</Link> }, { key: 'employee', label: 'Employee' }, { key: 'title', label: 'Title' }, { key: 'payment_status', label: 'Payment', render: (r) => <Badge>{r.payment_status || 'Awaiting Finance'}</Badge> }, { key: 'payable_amount', label: 'Payable', render: (r) => inr(r.payable_amount) }]} /></Card>
   </>);
 }
@@ -85,7 +85,7 @@ function AdminDash({ data }) {
   const k = data.kpis;
   return (<>
     <PageHead title="Administration" sub="Policy, users and system health" />
-    <div className="grid g5 mb"><Stat icon="users" tone="blue" value={k.users} label="Active Users" href="/users" /><Stat icon="shield" tone="green" value={k.rules} label="Active Policy Rules" href="/policy" /><Stat icon="plane" tone="purple" value={k.trips} label="Trips" href="/trips" /><Stat icon="alert" tone="orange" value={k.exceptions} label="Policy Exceptions" href="/reports" /><Stat icon="file" tone="gray" value={k.audit} label="Audit Records" href="/audit" /></div>
+    <div className="grid g5 mb"><Stat icon="users" tone="blue" value={k.users} label="Active Users" href="/users?active=1" /><Stat icon="shield" tone="green" value={k.rules} label="Active Policy Rules" href="/policy?status=Active" /><Stat icon="plane" tone="purple" value={k.trips} label="Trips" href="/trips" /><Stat icon="alert" tone="orange" value={k.exceptions} label="Policy Exceptions" href="/reports?type=policy_exceptions" /><Stat icon="file" tone="gray" value={k.audit} label="Audit Records" href="/audit" /></div>
     <Card title="Recent Activity" icon="clock" body={false}><DataTable rows={data.recentAudit} empty="No activity yet." columns={[{ key: 'ts', label: 'Time', render: (r) => String(r.ts).slice(0, 16).replace('T', ' ') }, { key: 'actor_name', label: 'Actor' }, { key: 'action', label: 'Action' }, { key: 'detail', label: 'Detail' }]} /></Card>
   </>);
 }

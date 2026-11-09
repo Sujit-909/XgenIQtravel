@@ -127,6 +127,13 @@ export function afterBookingDecision(db, user, approval, decision, cmt) {
   if (decision === 'approve') {
     const next = db.get("SELECT * FROM approvals WHERE entity_type='booking' AND entity_id=? AND status='Waiting' ORDER BY level LIMIT 1", b.id);
     if (next) { db.run("UPDATE approvals SET status='Pending' WHERE id=?", next.id); return; }
+    // Approving a discovered hotel option does not confirm a supplier reservation.
+    if (b.type === 'hotel' && json(b.details, {}).source === 'SerpApi Google Hotels') {
+      db.run("UPDATE bookings SET status='Ticketing Pending' WHERE id=?", b.id);
+      db.run("UPDATE services SET status='In Progress', desk_stage='Booking in Progress', updated_at=? WHERE booking_id=?", nowIso(), b.id);
+      notify(db, b.traveller_id, { category: 'other', title: `Hotel option ${b.booking_no} approved for booking`, body: 'The Travel Desk must obtain supplier confirmation before this reservation is confirmed.', link: '/bookings', refKey: `bk-ok:${b.id}` });
+      return;
+    }
     db.run("UPDATE bookings SET status='Confirmed', ticket_no=COALESCE(ticket_no, ?) WHERE id=?", b.type === 'flight' ? `618-${2345000000 + b.id * 13}` : null, b.id);
     db.run("UPDATE services SET status='Confirmed', desk_stage='Completed', updated_at=? WHERE booking_id=?", nowIso(), b.id);
     notify(db, b.traveller_id, { category: 'other', title: `Booking ${b.booking_no} approved and confirmed`, body: 'Policy exception approved.', link: '/bookings', refKey: `bk-ok:${b.id}` });
